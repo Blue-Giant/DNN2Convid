@@ -18,6 +18,45 @@ def load_csvData(datafile=None):
     return csvdate, csvdata
 
 
+def load_3csvData(datafile=None):
+    csvdata1_list = []
+    csvdata2_list = []
+    csvdate_list = []
+    icount = 0
+    csvreader = csv.reader(open(datafile, 'r'))
+    for dataItem2csv in csvreader:
+        if str.isnumeric(dataItem2csv[1]):
+            csvdata1_list.append(int(dataItem2csv[1]))
+            csvdata2_list.append(int(dataItem2csv[2]))
+            csvdate_list.append(icount)
+            icount = icount + 1
+    csvdate = np.array(csvdate_list)
+    csvdata1 = np.array(csvdata1_list)
+    csvdata2 = np.array(csvdata2_list)
+    return csvdate, csvdata1, csvdata2
+
+
+def load_4csvData(datafile=None):
+    csvdata1_list = []
+    csvdata2_list = []
+    csvdata3_list = []
+    csvdate_list = []
+    icount = 0
+    csvreader = csv.reader(open(datafile, 'r'))
+    for dataItem2csv in csvreader:
+        if str.isnumeric(dataItem2csv[1]):
+            csvdata1_list.append(int(dataItem2csv[1]))
+            csvdata2_list.append(int(dataItem2csv[2]))
+            csvdata3_list.append(int(dataItem2csv[3]))
+            csvdate_list.append(icount)
+            icount = icount + 1
+    csvdate = np.array(csvdate_list)
+    csvdata1 = np.array(csvdata1_list)
+    csvdata2 = np.array(csvdata2_list)
+    csvdata3 = np.array(csvdata2_list)
+    return csvdate, csvdata1, csvdata2, csvdata3
+
+
 # 将数据集拆分为训练集合测试集
 def split_csvData2train_test(date_data, data, size2train=50, normalFactor=10000):
 
@@ -27,6 +66,34 @@ def split_csvData2train_test(date_data, data, size2train=50, normalFactor=10000)
     date2test = date_data[size2train:-1]
     data2test = data[size2train:-1]/float(normalFactor)
     return date2train, data2train, date2test, data2test
+
+
+# 将数据集拆分为训练集合测试集
+def split_2csvData2train_test(date_data, data1, data2, size2train=50, normalFactor=10000):
+
+    date2train = date_data[0:size2train]
+    data1_train = data1[0:size2train]/float(normalFactor)
+    data2_train = data2[0:size2train] / float(normalFactor)
+
+    date2test = date_data[size2train:-1]
+    data1_test = data1[size2train:-1]/float(normalFactor)
+    data2_test = data2[size2train:-1] / float(normalFactor)
+    return date2train, data1_train, data2_train, date2test, data1_test, data2_test
+
+
+# 将数据集拆分为训练集合测试集
+def split_3csvData2train_test(date_data, data1, data2, data3, size2train=50, normalFactor=10000):
+
+    date2train = date_data[0:size2train]
+    data1_train = data1[0:size2train]/float(normalFactor)
+    data2_train = data2[0:size2train] / float(normalFactor)
+    data3_train = data3[0:size2train] / float(normalFactor)
+
+    date2test = date_data[size2train:-1]
+    data1_test = data1[size2train:-1]/float(normalFactor)
+    data2_test = data2[size2train:-1] / float(normalFactor)
+    data3_test = data3[size2train:-1] / float(normalFactor)
+    return date2train, data1_train, data2_train, data3_train, date2test, data1_test, data2_test, data3_test
 
 
 def randSample_existData(data1, data2, batchsize=1):
