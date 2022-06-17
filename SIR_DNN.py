@@ -148,6 +148,7 @@ def solve_SIR2COVID(R):
     with tf.device('/gpu:%s' % (R['gpuNo'])):
         with tf.variable_scope('vscope', reuse=tf.AUTO_REUSE):
             T_it = tf.placeholder(tf.float32, name='T_it', shape=[None, input_dim])
+            S_observe = tf.placeholder(tf.float32, name='S_observe', shape=[None, input_dim])
             I_observe = tf.placeholder(tf.float32, name='I_observe', shape=[None, input_dim])
             N_observe = tf.placeholder(tf.float32, name='N_observe', shape=[None, input_dim])
             predict_true_penalty = tf.placeholder_with_default(input=1e3, shape=[], name='bd_p')
@@ -263,7 +264,7 @@ def solve_SIR2COVID(R):
             temp_rnn2t = gamma * INN
 
             if str.lower(R['loss_function']) == 'l2_loss'and R['scale_up'] == 0:
-                # LossS_Net_obs = tf.reduce_mean(tf.square(SNN - S_observe))
+                LossS_Net_obs = tf.reduce_mean(tf.square(SNN - S_observe))
                 LossI_Net_obs = tf.reduce_mean(tf.square(INN - I_observe))
                 # LossR_Net_obs = tf.reduce_mean(tf.square(RNN - R_observe))
                 LossN_Net_obs = tf.reduce_mean(tf.square(N_NN - N_observe))
@@ -274,7 +275,7 @@ def solve_SIR2COVID(R):
                 Loss2dN = tf.reduce_mean(tf.square(dN_NN2t))
             elif str.lower(R['loss_function']) == 'l2_loss' and R['scale_up'] == 1:
                 scale_up = R['scale_factor']
-                # LossS_Net_obs = tf.reduce_mean(tf.square(scale_up*SNN - scale_up*S_observe))
+                LossS_Net_obs = tf.reduce_mean(tf.square(scale_up*SNN - scale_up*S_observe))
                 LossI_Net_obs = tf.reduce_mean(tf.square(scale_up*INN - scale_up*I_observe))
                 # LossR_Net_obs = tf.reduce_mean(tf.square(scale_up*RNN - scale_up*R_observe))
                 LossN_Net_obs = tf.reduce_mean(tf.square(scale_up*N_NN - scale_up*N_observe))
@@ -284,7 +285,7 @@ def solve_SIR2COVID(R):
                 Loss2dR = tf.reduce_mean(tf.square(scale_up*dRNN2t - scale_up*temp_rnn2t))
                 Loss2dN = tf.reduce_mean(tf.square(scale_up*dN_NN2t))
             elif str.lower(R['loss_function']) == 'lncosh_loss':
-                # LossS_Net_obs = tf.reduce_mean(tf.ln(tf.cosh(SNN - S_observe)))
+                LossS_Net_obs = tf.reduce_mean(tf.ln(tf.cosh(SNN - S_observe)))
                 LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(INN - I_observe)))
                 # LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(RNN - R_observe)))
                 LossN_Net_obs = tf.reduce_mean(tf.log(tf.cosh(N_NN - N_observe)))
@@ -319,7 +320,7 @@ def solve_SIR2COVID(R):
             PWB2Beta = wb_penalty * regular_WB2Beta
             PWB2Gamma = wb_penalty * regular_WB2Gamma
 
-            Loss2S = Loss2dS + PWB2S
+            Loss2S = predict_true_penalty * LossS_Net_obs + Loss2dS + PWB2S
             Loss2I = predict_true_penalty * LossI_Net_obs + Loss2dI + PWB2I
             Loss2R = Loss2dR + PWB2R
             Loss2N = predict_true_penalty * LossN_Net_obs + Loss2dN
