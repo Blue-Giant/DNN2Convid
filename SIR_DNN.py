@@ -152,7 +152,6 @@ def solve_SIR2COVID(R):
             N_observe = tf.placeholder(tf.float32, name='N_observe', shape=[None, input_dim])
             predict_true_penalty = tf.placeholder_with_default(input=1e3, shape=[], name='bd_p')
             in_learning_rate = tf.placeholder_with_default(input=1e-5, shape=[], name='lr')
-            train_opt = tf.placeholder_with_default(input=True, shape=[], name='train_opt')
 
             freq2SIR = np.concatenate(([1], np.arange(1, 20)), axis=0)
             if 'DNN' == str.upper(R['model2SIR']):
@@ -405,7 +404,7 @@ def solve_SIR2COVID(R):
             _, loss_s, loss_i, loss_r, loss_n, loss, pwb2s, pwb2i, pwb2r = sess.run(
                 [train_Losses, Loss2S, Loss2I, Loss2R, Loss2N, Loss, PWB2S, PWB2I, PWB2R],
                 feed_dict={T_it: t_batch, I_observe: i_obs, N_observe: n_obs, in_learning_rate: tmp_lr,
-                           train_opt: train_option, predict_true_penalty: temp_penalty_pt})
+                           predict_true_penalty: temp_penalty_pt})
 
             loss_s_all.append(loss_s)
             loss_i_all.append(loss_i)
@@ -423,9 +422,8 @@ def solve_SIR2COVID(R):
 
                 # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, beta, gamma 的测试结果
                 test_epoch.append(i_epoch / 1000)
-                train_option = False
                 s_nn2test, i_nn2test, r_nn2test, beta_test, gamma_test = sess.run(
-                    [SNN, INN, RNN, beta, gamma], feed_dict={T_it: test_t_bach, train_opt: train_option})
+                    [SNN, INN, RNN, beta, gamma], feed_dict={T_it: test_t_bach})
                 point_ERR2I = np.square(i_nn2test - i_obs_test)
                 test_mse2I = np.mean(point_ERR2I)
                 test_mse2I_all.append(test_mse2I)
@@ -441,7 +439,7 @@ def solve_SIR2COVID(R):
                 # --------以下代码为输出训练过程中 S_NN_temp, I_NN_temp, R_NN_temp, in_beta, in_gamma 的测试结果-------------
                 s_nn_temp2test, i_nn_temp2test, r_nn_temp2test, in_beta_test, in_gamma_test = sess.run(
                     [SNN_temp, INN_temp, RNN_temp, in_beta, in_gamma],
-                    feed_dict={T_it: test_t_bach, train_opt: train_option})
+                    feed_dict={T_it: test_t_bach})
 
                 DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testSolus2)
                 DNN_tools.log_string('The test result for s_temp:\n%s\n' % str(np.transpose(s_nn_temp2test)), log2testSolus2)
