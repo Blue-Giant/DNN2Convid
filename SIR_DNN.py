@@ -106,28 +106,29 @@ def solve_SIR2COVID(R):
 
     log2testParas = open(os.path.join(log_out_path, 'test_Paras.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
-    trainSet_szie = R['size2train']
-    batchSize_train = R['batch_size2train']
-    batchSize_test = R['batch_size2test']
-    pt_penalty_init = R['init_penalty2predict_true']   # Regularization parameter for difference of predict and true
-    wb_penalty = R['regular_weight']                   # Regularization parameter for weights
-    lr_decay = R['lr_decay']
-    learning_rate = R['learning_rate']
+    trainSet_szie = R['size2train']                    # 训练集大小,给定一个数据集，拆分训练集和测试集时，需要多大规模的训练集
+    batchSize_train = R['batch_size2train']            # 训练批量的大小,该值远小于训练集大小
+    batchSize_test = R['batch_size2test']              # 测试批量的大小,该值小于等于测试集大小
+    pt_penalty_init = R['init_penalty2predict_true']   # 预测值和真值得误差惩罚因子的初值,用于处理那些具有真实值得变量
+    wb_penalty = R['regular_weight']                   # 神经网络参数的惩罚因子
+    lr_decay = R['lr_decay']                           # 学习率额衰减
+    init_lr = R['learning_rate']                       # 初始学习率
 
-    act_func2SIR = R['act_Name2SIR']
-    act_func2paras = R['act_Name2paras']
+    act_func2SIR = R['act_Name2SIR']                   # S, I, R 三个神经网络的隐藏层激活函数
+    act_func2paras = R['act_Name2paras']               # 参数网络的隐藏层激活函数
 
-    input_dim = R['input_dim']
-    out_dim = R['output_dim']
+    input_dim = R['input_dim']                         # 输入维度
+    out_dim = R['output_dim']                          # 输出维度
 
-    flag2S = 'WB2S'
-    flag2I = 'WB2I'
-    flag2R = 'WB2R'
-    flag2beta = 'WB2beta'
-    flag2gamma = 'WB2gamma'
+    flag2S = 'WB2S'                                    # S的网络的变量空间标识
+    flag2I = 'WB2I'                                    # I的网络的变量空间标识
+    flag2R = 'WB2R'                                    # R的网络的变量空间标识
+    flag2beta = 'WB2beta'                              # beta 的网络的变量空间标识
+    flag2gamma = 'WB2gamma'                            # gamma 的网络的变量空间标识
     hidden_sir = R['hidden2SIR']
     hidden_para = R['hidden2para']
 
+    # 初始化神经网络的参数及其方式
     if str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
         Weight2S, Bias2S = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_sir, flag2S)
         Weight2I, Bias2I = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_sir, flag2I)
@@ -154,7 +155,7 @@ def solve_SIR2COVID(R):
             predict_true_penalty = tf.placeholder_with_default(input=1e3, shape=[], name='bd_p')
             in_learning_rate = tf.placeholder_with_default(input=1e-5, shape=[], name='lr')
 
-            freq2SIR = np.concatenate(([1], np.arange(1, 20)), axis=0)
+            freq2SIR = R['freq2SIR']
             if 'DNN' == str.upper(R['model2SIR']):
                 SNN_temp = DNN_base.DNN(T_it, Weight2S, Bias2S, hidden_sir, activateIn_name=R['actIn_Name2SIR'],
                                         activate_name=act_func2SIR)
@@ -164,20 +165,26 @@ def solve_SIR2COVID(R):
                                         activate_name=act_func2SIR)
             elif 'DNN_SCALE' == str.upper(R['model2SIR']):
                 SNN_temp = DNN_base.DNN_scale(T_it, Weight2S, Bias2S, hidden_sir, freq2SIR,
-                                              activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIR)
+                                              activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIR,
+                                              repeat_Highfreq=R['if_repeat_High_freq2SIR'])
                 INN_temp = DNN_base.DNN_scale(T_it, Weight2I, Bias2I, hidden_sir, freq2SIR,
-                                              activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIR)
+                                              activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIR,
+                                              repeat_Highfreq=R['if_repeat_High_freq2SIR'])
                 RNN_temp = DNN_base.DNN_scale(T_it, Weight2R, Bias2R, hidden_sir, freq2SIR,
-                                              activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIR)
+                                              activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIR,
+                                              repeat_Highfreq=R['if_repeat_High_freq2SIR'])
             elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
                 SNN_temp = DNN_base.DNN_FourierBase(T_it, Weight2S, Bias2S, hidden_sir, freq2SIR,
-                                                    activate_name=act_func2SIR, sFourier=1.0)
+                                                    activate_name=act_func2SIR, sFourier=1.0,
+                                                    repeat_Highfreq=R['if_repeat_High_freq2SIR'])
                 INN_temp = DNN_base.DNN_FourierBase(T_it, Weight2I, Bias2I, hidden_sir, freq2SIR,
-                                                    activate_name=act_func2SIR, sFourier=1.0)
+                                                    activate_name=act_func2SIR, sFourier=1.0,
+                                                    repeat_Highfreq=R['if_repeat_High_freq2SIR'])
                 RNN_temp = DNN_base.DNN_FourierBase(T_it, Weight2R, Bias2R, hidden_sir, freq2SIR,
-                                                    activate_name=act_func2SIR, sFourier=1.0)
+                                                    activate_name=act_func2SIR, sFourier=1.0,
+                                                    repeat_Highfreq=R['if_repeat_High_freq2SIR'])
 
-            freq2paras = np.concatenate(([1], np.arange(1, 20)), axis=0)
+            freq2paras = R['freq2paras']
             if 'DNN' == str.upper(R['model2paras']):
                 in_beta = DNN_base.DNN(T_it, Weight2beta, Bias2beta, hidden_para, activateIn_name=R['actIn_Name2paras'],
                                        activate_name=act_func2paras)
@@ -185,17 +192,22 @@ def solve_SIR2COVID(R):
                                         activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
             elif 'DNN_SCALE' == str.upper(R['model2paras']):
                 in_beta = DNN_base.DNN_scale(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
+                                             repeat_Highfreq=R['if_repeat_High_freq2paras'])
                 in_gamma = DNN_base.DNN_scale(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
+                                              repeat_Highfreq=R['if_repeat_High_freq2paras'])
             elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
                 in_beta = DNN_base.DNN_FourierBase(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                                   activate_name=act_func2paras, sFourier=1.0)
+                                                   activate_name=act_func2paras, sFourier=1.0,
+                                                   repeat_Highfreq=R['if_repeat_High_freq2paras'])
                 in_gamma = DNN_base.DNN_FourierBase(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                                    activate_name=act_func2paras, sFourier=1.0)
+                                                    activate_name=act_func2paras, sFourier=1.0,
+                                                    repeat_Highfreq=R['if_repeat_High_freq2paras'])
 
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
-            if (R['total_population'] == R['scale_population']) and R['scale_population'] != 1:
+            # 在归一化条件下: 如果总的“人口”和归一化"人口"的数值一致，这样的话，归一化后的数值会很小
+            if (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
                 beta = tf.square(in_beta)
                 gamma = tf.nn.sigmoid(in_gamma)
                 # SNN = SNN_temp
@@ -285,7 +297,7 @@ def solve_SIR2COVID(R):
                 Loss2dR = tf.reduce_mean(tf.square(scale_up*dRNN2t - scale_up*temp_rnn2t))
                 Loss2dN = tf.reduce_mean(tf.square(scale_up*dN_NN2t))
             elif str.lower(R['loss_function']) == 'lncosh_loss':
-                LossS_Net_obs = tf.reduce_mean(tf.ln(tf.cosh(SNN - S_observe)))
+                LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(SNN - S_observe)))
                 LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(INN - I_observe)))
                 # LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(RNN - R_observe)))
                 LossN_Net_obs = tf.reduce_mean(tf.log(tf.cosh(N_NN - N_observe)))
@@ -349,13 +361,16 @@ def solve_SIR2COVID(R):
 
     assert(trainSet_szie + batchSize_test <= len(data))
     train_date, train_data2i, test_date, test_data2i = \
-        DNN_data.split_csvData2train_test(date, data, size2train=trainSet_szie, normalFactor=R['scale_population'])
+        DNN_data.split_csvData2train_test(date, data, size2train=trainSet_szie, normalFactor=R['normalize_population'])
 
-    if R['scale_population'] == 1:
+    if R['normalize_population'] == 1:
+        # 不归一化数据
         nbatch2train = np.ones(batchSize_train, dtype=np.float32)*float(R['total_population'])
-    elif (R['total_population'] != R['scale_population']) and R['scale_population'] != 1:
-        nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (float(R['total_population'])/float(R['scale_population']))
-    elif (R['total_population'] == R['scale_population']) and R['scale_population'] != 1:
+    elif (R['total_population'] != R['normalize_population']) and R['normalize_population'] != 1:
+        # 归一化数据，使用的归一化数值小于总“人口”
+        nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (float(R['total_population'])/float(R['normalize_population']))
+    elif (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
+        # 归一化数据，使用总“人口”归一化数据
         nbatch2train = np.ones(batchSize_train, dtype=np.float32)
 
     # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证
@@ -371,14 +386,13 @@ def solve_SIR2COVID(R):
     config.allow_soft_placement = True                  # 当指定的设备不存在时，允许选择一个存在的设备运行。比如gpu不存在，自动降到cpu上运行
     with tf.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
-        tmp_lr = learning_rate
+        tmp_lr = init_lr
         for i_epoch in range(R['max_epoch'] + 1):
             t_batch, i_obs = \
                 DNN_data.randSample_Normalize_existData(train_date, train_data2i, batchsize=batchSize_train,
                                                         normalFactor=1.0, sampling_opt=R['opt2sample'])
             n_obs = nbatch2train.reshape(batchSize_train, 1)
             tmp_lr = tmp_lr * (1 - lr_decay)
-            train_option = True
             if R['activate_stage_penalty'] == 1:
                 if i_epoch < int(R['max_epoch'] / 10):
                     temp_penalty_pt = pt_penalty_init
@@ -540,11 +554,11 @@ if __name__ == "__main__":
     R['eqs_name'] = 'SIR'
     R['input_dim'] = 1                    # 输入维数，即问题的维数(几元问题)
     R['output_dim'] = 1                   # 输出维数
-    R['total_population'] = 9776000
+    R['total_population'] = 9776000       # 总的“人口”数量
 
-    R['scale_population'] = 9776000
-    # R['scale_population'] = 100000
-    # R['scale_population'] = 1
+    R['normalize_population'] = 9776000       # 归一化时使用的“人口”数值
+    # R['normalize_population'] = 100000
+    # R['normalize_population'] = 1
 
     # ------------------------------------  神经网络的设置  ----------------------------------------
     R['size2train'] = 70                    # 训练集的大小
@@ -553,8 +567,8 @@ if __name__ == "__main__":
     # R['opt2sample'] = 'random_sample'     # 训练集的选取方式--随机采样
     R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
 
-    R['init_penalty2predict_true'] = 50   # Regularization parameter for boundary conditions
-    R['activate_stage_penalty'] = 1       # 是否开启阶段调整边界惩罚项
+    R['init_penalty2predict_true'] = 50     # Regularization parameter for boundary conditions
+    R['activate_stage_penalty'] = 1         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
     if R['activate_stage_penalty'] == 1 or R['activate_stage_penalty'] == 2:
         # R['init_penalty2predict_true'] = 1000
         # R['init_penalty2predict_true'] = 100
@@ -562,24 +576,25 @@ if __name__ == "__main__":
         # R['init_penalty2predict_true'] = 20
         R['init_penalty2predict_true'] = 1
 
-    # R['regular_weight_model'] = 'L0'
-    # R['regular_weight'] = 0.000             # Regularization parameter for weights
+    # R['regular_weight_model'] = 'L0'      # The model of regular weights and biases
+    # R['regular_weight'] = 0.000           # Regularization parameter for weights
 
     # R['regular_weight_model'] = 'L1'
     R['regular_weight_model'] = 'L2'        # The model of regular weights and biases
     # R['regular_weight'] = 0.001           # Regularization parameter for weights
     # R['regular_weight'] = 0.0005          # Regularization parameter for weights
-    # R['regular_weight'] = 0.0001            # Regularization parameter for weights
-    R['regular_weight'] = 0.00005          # Regularization parameter for weights
-    # R['regular_weight'] = 0.00001        # Regularization parameter for weights
+    # R['regular_weight'] = 0.0001          # Regularization parameter for weights
+    R['regular_weight'] = 0.00005           # Regularization parameter for weights
+    # R['regular_weight'] = 0.00001         # Regularization parameter for weights
 
     R['optimizer_name'] = 'Adam'           # 优化器
-    R['loss_function'] = 'L2_loss'
-    R['scale_up'] = 1
-    R['scale_factor'] = 100
-    # R['loss_function'] = 'lncosh_loss'
-    # R['train_model'] = 'train_group'
-    R['train_model'] = 'train_union_loss'
+    R['loss_function'] = 'L2_loss'         # 损失函数的类型
+    # R['loss_function'] = 'lncosh_loss'   # 损失函数的类型
+    R['scale_up'] = 1                      # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
+    R['scale_factor'] = 100                # scale_factor 用来对数值进行尺度提升，如1e-6量级提升到1e-2量级
+
+    # R['train_model'] = 'train_group'     # 训练模式:各个不同的loss捆绑打包训练
+    R['train_model'] = 'train_union_loss'  # 训练模式:各个不同的loss累加在一起，训练
 
     if 50000 < R['max_epoch']:
         R['learning_rate'] = 2e-3           # 学习率
@@ -591,13 +606,13 @@ if __name__ == "__main__":
         # R['lr_decay'] = 1e-4              # 学习率 decay
         # R['learning_rate'] = 2e-4         # 学习率
         # R['lr_decay'] = 1e-4              # 学习率 decay
-        R['learning_rate'] = 1e-4         # 学习率
-        R['lr_decay'] = 5e-5              # 学习率 decay
+        R['learning_rate'] = 1e-4           # 学习率
+        R['lr_decay'] = 5e-5                # 学习率 decay
     else:
-        R['learning_rate'] = 5e-5         # 学习率
-        R['lr_decay'] = 1e-5              # 学习率 decay
+        R['learning_rate'] = 5e-5           # 学习率
+        R['lr_decay'] = 1e-5                # 学习率 decay
 
-    # 网络模型的选择
+    # SIR和参数网络模型的选择
     # R['model2SIR'] = 'DNN'
     # R['model2SIR'] = 'DNN_scale'
     # R['model2SIR'] = 'DNN_scaleOut'
@@ -608,6 +623,7 @@ if __name__ == "__main__":
     # R['model2paras'] = 'DNN_scaleOut'
     R['model2paras'] = 'DNN_FourierBase'
 
+    # SIR和参数网络模型的隐藏层单元数目
     if R['model2SIR'] == 'DNN_FourierBase':
         R['hidden2SIR'] = (35, 50, 30, 30, 20)          # 1*50+50*50+50*30+30*30+30*20+20*1 = 5570
     else:
@@ -626,7 +642,19 @@ if __name__ == "__main__":
         # R['hidden2para'] = (100, 100, 80, 60, 60, 40)
         # R['hidden2para'] = (200, 100, 100, 80, 50, 50)
 
-    # 激活函数的选择
+    # SIR和参数网络模型的尺度因子
+    if R['model2SIR'] != 'DNN':
+        R['freq2SIR'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
+    if R['model2paras'] != 'DNN':
+        R['freq2paras'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
+
+    # SIR和参数网络模型为傅里叶网络和尺度网络时，重复高频因子或者低频因子
+    if R['model2SIR'] == 'DNN_FourierBase' or R['model2SIR'] == 'DNN_scale':
+        R['if_repeat_High_freq2SIR'] = False
+    if R['model2paras'] == 'DNN_FourierBase' or R['model2paras'] == 'DNN_scale':
+        R['if_repeat_High_freq2paras'] = False
+
+    # SIR和参数网络模型的激活函数的选择
     # R['actIn_Name2SIR'] = 'relu'
     # R['actIn_Name2SIR'] = 'leaky_relu'
     # R['actIn_Name2SIR'] = 'sigmod'
