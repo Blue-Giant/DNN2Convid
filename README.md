@@ -4,4 +4,7 @@ The codes are implemented in tensorflow--1.14 or 1.15 under the interpreter pyth
 
 # Reference paper and URLs:
 1、Analysis of COVID-19 spread in South Korea using the SIR model with time-dependent parameters and deep learning https://www.medrxiv.org/content/10.1101/2020.04.13.20063412v1
+
 2、【数学建模】传染病SIR模型 https://blog.csdn.net/qq_45654306/article/details/108135965
+
+3、传染病SIR模型 https://blog.csdn.net/qq_43585318/article/details/104194312
