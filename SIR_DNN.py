@@ -35,6 +35,13 @@ def dictionary_out2file(R_dic, log_fileout):
     else:
         DNN_tools.log_string('The input activate function for parameter: %s\n' % str(R_dic['actIn_Name2paras']), log_fileout)
 
+    if str.upper(R_dic['model2SIR']) != 'DNN':
+        DNN_tools.log_string('The scale for frequency to SIR NN: %s\n' % str(R_dic['freq2SIR']), log_fileout)
+        DNN_tools.log_string('Repeat the high-frequency scale or not for SIR-NN: %s\n' % str(R_dic['if_repeat_High_freq2SIR']), log_fileout)
+    if str.upper(R_dic['model2paras']) != 'DNN':
+        DNN_tools.log_string('The scale for frequency to SIR NN: %s\n' % str(R_dic['freq2paras']), log_fileout)
+        DNN_tools.log_string('Repeat the high-frequency scale or not for para-NN: %s\n' % str(R_dic['if_repeat_High_freq2paras']), log_fileout)
+
     DNN_tools.log_string('The hidden-layer activate function for parameter: %s\n' % str(R_dic['act_Name2paras']), log_fileout)
 
     DNN_tools.log_string('hidden layers for SIR: %s\n' % str(R_dic['hidden2SIR']), log_fileout)
@@ -292,15 +299,26 @@ def solve_SIR2COVID(R):
                 # LossR_Net_obs = tf.reduce_mean(tf.square(scale_up*RNN - scale_up*R_observe))
                 LossN_Net_obs = tf.reduce_mean(tf.square(scale_up*N_NN - scale_up*N_observe))
 
-                Loss2dS = tf.reduce_mean(tf.square(scale_up*dSNN2t - scale_up*temp_snn2t))
-                Loss2dI = tf.reduce_mean(tf.square(scale_up*dINN2t - scale_up*temp_inn2t))
-                Loss2dR = tf.reduce_mean(tf.square(scale_up*dRNN2t - scale_up*temp_rnn2t))
-                Loss2dN = tf.reduce_mean(tf.square(scale_up*dN_NN2t))
-            elif str.lower(R['loss_function']) == 'lncosh_loss':
+                Loss2dS = tf.reduce_mean(tf.square(dSNN2t - temp_snn2t))
+                Loss2dI = tf.reduce_mean(tf.square(dINN2t - temp_inn2t))
+                Loss2dR = tf.reduce_mean(tf.square(dRNN2t - temp_rnn2t))
+                Loss2dN = tf.reduce_mean(tf.square(dN_NN2t))
+            elif str.lower(R['loss_function']) == 'lncosh_loss'and R['scale_up'] == 0:
                 LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(SNN - S_observe)))
                 LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(INN - I_observe)))
                 # LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(RNN - R_observe)))
                 LossN_Net_obs = tf.reduce_mean(tf.log(tf.cosh(N_NN - N_observe)))
+
+                Loss2dS = tf.reduce_mean(tf.log(tf.cosh(dSNN2t - temp_snn2t)))
+                Loss2dI = tf.reduce_mean(tf.log(tf.cosh(dINN2t - temp_inn2t)))
+                Loss2dR = tf.reduce_mean(tf.log(tf.cosh(dRNN2t - temp_rnn2t)))
+                Loss2dN = tf.reduce_mean(tf.log(tf.cosh(dN_NN2t)))
+            elif str.lower(R['loss_function']) == 'lncosh_loss'and R['scale_up'] == 1:
+                scale_up = R['scale_factor']
+                LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*SNN - scale_up*S_observe)))
+                LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*INN - scale_up*I_observe)))
+                # LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(RNN - R_observe)))
+                LossN_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*N_NN - scale_up*N_observe)))
 
                 Loss2dS = tf.reduce_mean(tf.log(tf.cosh(dSNN2t - temp_snn2t)))
                 Loss2dI = tf.reduce_mean(tf.log(tf.cosh(dINN2t - temp_inn2t)))
