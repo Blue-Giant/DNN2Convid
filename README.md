@@ -8,3 +8,7 @@ The codes are implemented in tensorflow--1.14 or 1.15 under the interpreter pyth
 2、【数学建模】传染病SIR模型 https://blog.csdn.net/qq_45654306/article/details/108135965
 
 3、传染病SIR模型 https://blog.csdn.net/qq_43585318/article/details/104194312
+
+4、h《全网首发》基于SEIR（SIR）对新冠肺炎的分析和预测 https://wxw-123.blog.csdn.net/article/details/118309560
+
+5、新冠数据整理和简单分析（二）——SIR及其变种 https://blog.csdn.net/weixin_41677876/article/details/105365496
