@@ -39,6 +39,13 @@ def dictionary_out2file(R_dic, log_fileout):
     DNN_tools.log_string('hidden layers for SIR: %s\n' % str(R_dic['hidden2SIRD']), log_fileout)
     DNN_tools.log_string('hidden layers for parameters: %s\n' % str(R_dic['hidden2para']), log_fileout)
 
+    if str.upper(R_dic['model2SIRD']) != 'DNN':
+        DNN_tools.log_string('The scale for frequency to SIR NN: %s\n' % str(R_dic['freq2SIRD']), log_fileout)
+        DNN_tools.log_string('Repeat the high-frequency scale or not for SIR-NN: %s\n' % str(R_dic['if_repeat_High_freq2SIRD']), log_fileout)
+    if str.upper(R_dic['model2paras']) != 'DNN':
+        DNN_tools.log_string('The scale for frequency to SIR NN: %s\n' % str(R_dic['freq2paras']), log_fileout)
+        DNN_tools.log_string('Repeat the high-frequency scale or not for para-NN: %s\n' % str(R_dic['if_repeat_High_freq2paras']), log_fileout)
+
     DNN_tools.log_string('Init learning rate: %s\n' % str(R_dic['learning_rate']), log_fileout)
     DNN_tools.log_string('Decay to learning rate: %s\n' % str(R_dic['lr_decay']), log_fileout)
     DNN_tools.log_string('The type for Loss function: %s\n' % str(R_dic['loss_function']), log_fileout)
@@ -117,7 +124,7 @@ def solve_SIRD2COVID(R):
     lr_decay = R['lr_decay']                          # 学习率额衰减
     init_lr = R['learning_rate']                      # 初始学习率
 
-    act_func2SIRD = R['act_Name2SIR']                 # S, I, R D 四个神经网络的隐藏层激活函数
+    act_func2SIRD = R['act_Name2SIRD']                 # S, I, R D 四个神经网络的隐藏层激活函数
     act_func2paras = R['act_Name2paras']              # 参数网络的隐藏层激活函数
 
     input_dim = R['input_dim']                        # 输入维度
@@ -126,13 +133,13 @@ def solve_SIRD2COVID(R):
     flag2S = 'WB2S'
     flag2I = 'WB2I'
     flag2R = 'WB2R'
-    flag2D = 'WB2R'
+    flag2D = 'WB2D'
     flag2beta = 'WB2beta'
     flag2gamma = 'WB2gamma'
-    hidden_sird = R['hidden2SIR']
+    hidden_sird = R['hidden2SIRD']
     hidden_para = R['hidden2para']
 
-    if str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
+    if str.upper(R['model2SIRD']) == 'DNN_FOURIERBASE':
         Weight2S, Bias2S = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_sird, flag2S)
         Weight2I, Bias2I = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_sird, flag2I)
         Weight2R, Bias2R = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_sird, flag2R)
@@ -163,7 +170,7 @@ def solve_SIRD2COVID(R):
             # in_gamma = tf.placeholder_with_default(input=1e-5, shape=[], name='gamma')
 
             freq2SIRD = R['freq2SIRD']
-            if 'DNN' == str.upper(R['model2SIR']):
+            if 'DNN' == str.upper(R['model2SIRD']):
                 SNN_temp = DNN_base.DNN(T_it, Weight2S, Bias2S, hidden_sird, activateIn_name=R['actIn_Name2SIR'],
                                         activate_name=act_func2SIRD)
                 INN_temp = DNN_base.DNN(T_it, Weight2I, Bias2I, hidden_sird, activateIn_name=R['actIn_Name2SIR'],
@@ -172,7 +179,7 @@ def solve_SIRD2COVID(R):
                                         activate_name=act_func2SIRD)
                 DNN_temp = DNN_base.DNN(T_it, Weight2D, Bias2D, hidden_sird, activateIn_name=R['actIn_Name2SIR'],
                                         activate_name=act_func2SIRD)
-            elif 'DNN_SCALE' == str.upper(R['model2SIR']):
+            elif 'DNN_SCALE' == str.upper(R['model2SIRD']):
                 SNN_temp = DNN_base.DNN_scale(T_it, Weight2S, Bias2S, hidden_sird, freq2SIRD,
                                               activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIRD)
                 INN_temp = DNN_base.DNN_scale(T_it, Weight2I, Bias2I, hidden_sird, freq2SIRD,
@@ -181,7 +188,7 @@ def solve_SIRD2COVID(R):
                                               activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIRD)
                 DNN_temp = DNN_base.DNN_scale(T_it, Weight2D, Bias2D, hidden_sird, freq2SIRD,
                                               activateIn_name=R['actIn_Name2SIR'], activate_name=act_func2SIRD)
-            elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
+            elif str.upper(R['model2SIRD']) == 'DNN_FOURIERBASE':
                 SNN_temp = DNN_base.DNN_FourierBase(T_it, Weight2S, Bias2S, hidden_sird, freq2SIRD,
                                                     activate_name=act_func2SIRD, sFourier=1.0)
                 INN_temp = DNN_base.DNN_FourierBase(T_it, Weight2I, Bias2I, hidden_sird, freq2SIRD,
