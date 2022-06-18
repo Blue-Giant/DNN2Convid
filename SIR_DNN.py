@@ -374,12 +374,13 @@ def solve_SIR2COVID(R):
 
     # filename = 'data2csv/Wuhan.csv'
     # filename = 'data2csv/Italia_data.csv'
-    filename = 'data2csv/Korea_data.csv'
-    date, data = DNN_data.load_csvData(filename)
+    # filename = 'data2csv/Korea_data.csv'
+    filename = 'data2csv/minnesota.csv'
+    date, data = DNN_data.load_2csvData(filename)
 
     assert(trainSet_szie + batchSize_test <= len(data))
     train_date, train_data2i, test_date, test_data2i = \
-        DNN_data.split_csvData2train_test(date, data, size2train=trainSet_szie, normalFactor=R['normalize_population'])
+        DNN_data.split_2csvData2train_test(date, data, size2train=trainSet_szie, normalFactor=R['normalize_population'])
 
     if R['normalize_population'] == 1:
         # 不归一化数据
