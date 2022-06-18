@@ -111,6 +111,25 @@ def randSample_existData(data1, data2, batchsize=1):
     return data1_samples, data2_samples
 
 
+def randSample_3existData(data1, data2, data3, batchsize=1):
+    data1_temp = []
+    data2_temp = []
+    data3_temp = []
+    data_length = len(data1)
+    indexes = np.random.randint(data_length, size=batchsize)
+    for i_index in indexes:
+        data1_temp .append(data1[i_index])
+        data2_temp .append(data2[i_index])
+        data3_temp.append(data3[i_index])
+    data1_samples = np.array(data1_temp)
+    data2_samples = np.array(data2_temp)
+    data3_samples = np.array(data3_temp)
+    data1_samples = data1_samples.reshape(batchsize, 1)
+    data2_samples = data2_samples.reshape(batchsize, 1)
+    data3_samples = data3_samples.reshape(batchsize, 1)
+    return data1_samples, data2_samples, data3_samples
+
+
 # 从总体数据集中载入部分数据作为训练集
 def randSample_Normalize_existData(date_data, data2, batchsize=1, normalFactor=1000, sampling_opt=None):
     date_temp = []
