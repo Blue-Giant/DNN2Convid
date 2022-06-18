@@ -16,3 +16,5 @@ The codes are implemented in tensorflow--1.14 or 1.15 under the interpreter pyth
 6、新型冠状病毒传染模型SI、SIS、SIR、SEIR https://blog.csdn.net/eddsadsadasd/article/details/104751112
 
 7、2020年美国新冠肺炎疫情数据分析 https://hejianing.blog.csdn.net/article/details/117928134
+
+8、python实现SI、SIS、SIR、SIRS、SEIR、SEIRS模型 https://blog.csdn.net/weixin_43289424/article/details/104214637
