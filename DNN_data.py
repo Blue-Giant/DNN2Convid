@@ -18,6 +18,24 @@ def load_2csvData(datafile=None):
     return csvdate, csvdata
 
 
+def load_2csvData_cal_S(datafile=None, total_population=100000):
+    csvdata2I_list = []
+    csvdata2S_list = []
+    csvdate_list = []
+    icount = 0
+    csvreader = csv.reader(open(datafile, 'r'))
+    for dataItem2csv in csvreader:
+        if str.isnumeric(dataItem2csv[1]):
+            csvdata2I_list.append(int(dataItem2csv[1]))
+            csvdata2S_list.append(int(total_population)-int(dataItem2csv[1]))
+            csvdate_list.append(icount)
+            icount = icount + 1
+    csvdate = np.array(csvdate_list)
+    csvdata2I = np.array(csvdata2I_list)
+    csvdata2S = np.array(csvdata2S_list)
+    return csvdate, csvdata2I, csvdata2S
+
+
 def load_3csvData(datafile=None):
     csvdata1_list = []
     csvdata2_list = []
@@ -174,6 +192,30 @@ def randSample_3existData(data1, data2, data3, batchsize=1):
 # 从总体数据集中载入部分数据作为训练集
 def randSample_Normalize_existData(date_data, data2, batchsize=1, normalFactor=1000, sampling_opt=None):
     date_temp = []
+    data_temp = []
+    data_length = len(date_data)
+    if str.lower(sampling_opt) == 'random_sample':
+        indexes = np.random.randint(data_length, size=batchsize)
+    elif str.lower(sampling_opt) == 'rand_sample_sort':
+        indexes_temp = np.random.randint(data_length, size=batchsize)
+        indexes = np.sort(indexes_temp)
+    else:
+        index_base = np.random.randint(data_length-batchsize, size=1)
+        indexes = np.arange(index_base, index_base+batchsize)
+    for i_index in indexes:
+        date_temp .append(float(date_data[i_index]))
+        data_temp .append(float(data2[i_index])/float(normalFactor))
+    date_samples = np.array(date_temp)
+    data_samples = np.array(data_temp)
+    date_samples = date_samples.reshape(batchsize, 1)
+    data_samples = data_samples.reshape(batchsize, 1)
+    return date_samples, data_samples
+
+
+# 从总体数据集中载入部分数据作为训练集
+def randSample_Normalize_3existData(date_data, data1, data2, batchsize=1, normalFactor=1000, sampling_opt=None):
+    date_temp = []
+    data1_temp = []
     data2_temp = []
     data_length = len(date_data)
     if str.lower(sampling_opt) == 'random_sample':
@@ -186,12 +228,17 @@ def randSample_Normalize_existData(date_data, data2, batchsize=1, normalFactor=1
         indexes = np.arange(index_base, index_base+batchsize)
     for i_index in indexes:
         date_temp .append(float(date_data[i_index]))
+        data1_temp.append(float(data1[i_index]) / float(normalFactor))
         data2_temp .append(float(data2[i_index])/float(normalFactor))
+
     date_samples = np.array(date_temp)
+    data1_samples = np.array(data1_temp)
     data2_samples = np.array(data2_temp)
+
     date_samples = date_samples.reshape(batchsize, 1)
+    data1_samples = data1_samples.reshape(batchsize, 1)
     data2_samples = data2_samples.reshape(batchsize, 1)
-    return date_samples, data2_samples
+    return date_samples, data1_samples, data2_samples
 
 
 # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证
