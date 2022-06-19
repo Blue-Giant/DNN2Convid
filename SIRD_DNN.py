@@ -408,29 +408,44 @@ def solve_SIRD2COVID(R):
     # filename = 'data2csv/Wuhan.csv'
     # filename = 'data2csv/Italia_data.csv'
     filename = 'data2csv/Korea_data.csv'
-    date, data = DNN_data.load_2csvData(filename)
+    # filename = 'data2csv/minnesota.csv'
+    date, data2I, data2S = DNN_data.load_2csvData_cal_S(datafile=filename, total_population=R['total_population'])
 
-    assert (trainSet_szie + batchSize_test <= len(data))
-    train_date, train_data2i, test_date, test_data2i = \
-        DNN_data.split_2csvData2train_test(date, data, size2train=trainSet_szie, normalFactor=R['normalize_population'])
-
+    assert (trainSet_szie + batchSize_test <= len(data2I))
     if R['normalize_population'] == 1:
         # 不归一化数据
+        train_date, train_data2i, train_data2s, test_date, test_data2i, test_data2s = \
+            DNN_data.split_3csvData2train_test(date, data2I, data2S, size2train=trainSet_szie, normalFactor=1.0)
         nbatch2train = np.ones(batchSize_train, dtype=np.float32) * float(R['total_population'])
+
     elif (R['total_population'] != R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用的归一化数值小于总“人口”
+        train_date, train_data2i, train_data2s, test_date, test_data2i, test_data2s = \
+            DNN_data.split_3csvData2train_test(date, data2I, data2S, size2train=trainSet_szie,
+                                               normalFactor=R['normalize_population'])
         nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (
                     float(R['total_population']) / float(R['normalize_population']))
+
     elif (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用总“人口”归一化数据
+        train_date, train_data2i, train_data2s, test_date, test_data2i, test_data2s = \
+            DNN_data.split_3csvData2train_test(date, data2I, data2S, size2train=trainSet_szie,
+                                               normalFactor=R['normalize_population'])
         nbatch2train = np.ones(batchSize_train, dtype=np.float32)
 
-    # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证
+    # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证.
     test_t_bach = DNN_data.sample_testDays_serially(test_date, batchSize_test)
+
+    # 由于将数据拆分为训练数据和测试数据时，进行了归一化处理，故这里不用归一化
     i_obs_test = DNN_data.sample_testData_serially(test_data2i, batchSize_test, normalFactor=1.0)
+    s_obs_test = DNN_data.sample_testData_serially(test_data2s, batchSize_test, normalFactor=1.0)
+
     print('The test data about i:\n', str(np.transpose(i_obs_test)))
     print('\n')
+    print('The test data about s:\n', str(np.transpose(s_obs_test)))
+    print('\n')
     DNN_tools.log_string('The test data about i:\n%s\n' % str(np.transpose(i_obs_test)), log_fileout)
+    DNN_tools.log_string('The test data about s:\n%s\n' % str(np.transpose(s_obs_test)), log_fileout)
 
     # ConfigProto 加上allow_soft_placement=True就可以使用 gpu 了
     config = tf.ConfigProto(allow_soft_placement=True)  # 创建sess的时候对sess进行参数配置
@@ -630,7 +645,8 @@ if __name__ == "__main__":
     R['batch_size2train'] = 20              # 训练数据的批大小
     R['batch_size2test'] = 10               # 训练数据的批大小
     # R['opt2sample'] = 'random_sample'     # 训练集的选取方式--随机采样
-    R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
+    # R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
+    R['opt2sample'] = 'windows_rand_sample'  # 训练集的选取方式--随机窗口采样(以随机点为基准，然后滑动窗口采样)
 
     R['init_penalty2predict_true'] = 50     # Regularization parameter for boundary conditions
     R['activate_stage_penalty'] = 1         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
