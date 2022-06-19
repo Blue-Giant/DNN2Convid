@@ -54,6 +54,27 @@ def load_3csvData(datafile=None):
     return csvdate, csvdata1, csvdata2
 
 
+def load_3csvData_cal_S(datafile=None, total_population=100000):
+    csvdata1_list = []
+    csvdata2_list = []
+    csvdata3_list = []
+    csvdate_list = []
+    icount = 0
+    csvreader = csv.reader(open(datafile, 'r'))
+    for dataItem2csv in csvreader:
+        if str.isnumeric(dataItem2csv[1]):
+            csvdata1_list.append(int(dataItem2csv[1]))
+            csvdata2_list.append(int(dataItem2csv[2]))
+            csvdata3_list.append(int(total_population)-int(dataItem2csv[2]))
+            csvdate_list.append(icount)
+            icount = icount + 1
+    csvdate = np.array(csvdate_list)
+    csvdata1 = np.array(csvdata1_list)
+    csvdata2 = np.array(csvdata2_list)
+    csvdata3 = np.array(csvdata2_list)
+    return csvdate, csvdata1, csvdata2, csvdata3
+
+
 def load_4csvData(datafile=None):
     csvdata1_list = []
     csvdata2_list = []

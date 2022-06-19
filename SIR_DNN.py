@@ -374,8 +374,8 @@ def solve_SIR2COVID(R):
 
     # filename = 'data2csv/Wuhan.csv'
     # filename = 'data2csv/Italia_data.csv'
-    # filename = 'data2csv/Korea_data.csv'
-    filename = 'data2csv/minnesota.csv'
+    filename = 'data2csv/Korea_data.csv'
+    # filename = 'data2csv/minnesota.csv'
 
     date, data2I, data2S = DNN_data.load_2csvData_cal_S(datafile=filename, total_population=R['total_population'])
 
@@ -589,16 +589,16 @@ if __name__ == "__main__":
     R['eqs_name'] = 'SIR'
     R['input_dim'] = 1                    # 输入维数，即问题的维数(几元问题)
     R['output_dim'] = 1                   # 输出维数
-    R['total_population'] = 9776000       # 总的“人口”数量
+    R['total_population'] = 9776000       # 总的“人口”数量(韩国)
 
-    R['normalize_population'] = 9776000       # 归一化时使用的“人口”数值
-    # R['normalize_population'] = 100000
+    # R['normalize_population'] = 9776000       # 归一化时使用的“人口”数值
+    R['normalize_population'] = 100000
     # R['normalize_population'] = 1
 
     # ------------------------------------  神经网络的设置  ----------------------------------------
     R['size2train'] = 70                    # 训练集的大小
     R['batch_size2train'] = 20              # 训练数据的批大小
-    R['batch_size2test'] = 10               # 训练数据的批大小
+    R['batch_size2test'] = 10               # 测试数据的批大小
     # R['opt2sample'] = 'random_sample'     # 训练集的选取方式--随机采样
     R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
 
