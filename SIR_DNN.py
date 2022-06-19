@@ -596,14 +596,15 @@ if __name__ == "__main__":
     # R['normalize_population'] = 1
 
     # ------------------------------------  神经网络的设置  ----------------------------------------
-    R['size2train'] = 70                    # 训练集的大小
-    R['batch_size2train'] = 20              # 训练数据的批大小
-    R['batch_size2test'] = 10               # 测试数据的批大小
-    # R['opt2sample'] = 'random_sample'     # 训练集的选取方式--随机采样
-    R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
+    R['size2train'] = 70                       # 训练集的大小
+    R['batch_size2train'] = 20                 # 训练数据的批大小
+    R['batch_size2test'] = 10                  # 测试数据的批大小
+    # R['opt2sample'] = 'random_sample'        # 训练集的选取方式--随机采样
+    # R['opt2sample'] = 'rand_sample_sort'       # 训练集的选取方式--随机采样后按时间排序
+    R['opt2sample'] = 'windows_rand_sample'    # 训练集的选取方式--随机窗口采样(以随机点为基准，然后滑动窗口采样)
 
-    R['init_penalty2predict_true'] = 50     # Regularization parameter for boundary conditions
-    R['activate_stage_penalty'] = 1         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
+    R['init_penalty2predict_true'] = 50        # Regularization parameter for boundary conditions
+    R['activate_stage_penalty'] = 1            # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
     if R['activate_stage_penalty'] == 1 or R['activate_stage_penalty'] == 2:
         # R['init_penalty2predict_true'] = 1000
         # R['init_penalty2predict_true'] = 100
