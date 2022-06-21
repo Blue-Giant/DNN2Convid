@@ -104,14 +104,14 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, temp_penalty_nt, penalty_wb2s
 
 
 def solve_SIRD2COVID(R):
-    log_out_path = R['FolderName']  # 将路径从字典 R 中提取出来
+    log_out_path = R['FolderName']        # 将路径从字典 R 中提取出来
     if not os.path.exists(log_out_path):  # 判断路径是否已经存在
-        os.mkdir(log_out_path)  # 无 log_out_path 路径，创建一个 log_out_path 路径
+        os.mkdir(log_out_path)            # 无 log_out_path 路径，创建一个 log_out_path 路径
     log_fileout = open(os.path.join(log_out_path, 'log_train.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
     dictionary_out2file(R, log_fileout)
 
-    log2trianSolus = open(os.path.join(log_out_path, 'train_Solus.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    log2testSolus = open(os.path.join(log_out_path, 'test_Solus.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
+    log2trianSolus = open(os.path.join(log_out_path, 'train_Solus.txt'), 'w')      # 在这个路径下创建并打开一个可写的 log_train.txt文件
+    log2testSolus = open(os.path.join(log_out_path, 'test_Solus.txt'), 'w')        # 在这个路径下创建并打开一个可写的 log_train.txt文件
     log2testSolus2 = open(os.path.join(log_out_path, 'test_Solus_temp.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
     log2testParas = open(os.path.join(log_out_path, 'test_Paras.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
