@@ -506,8 +506,8 @@ def regular_weights_biases_L1(weights, biases):
     regular_w = 0
     regular_b = 0
     for i_layer1 in range(layers):
-        regular_w = regular_w + tf.reduce_sum(tf.abs(weights[i_layer1]), keep_dims=False)
-        regular_b = regular_b + tf.reduce_sum(tf.abs(biases[i_layer1]), keep_dims=False)
+        regular_w = regular_w + tf.reduce_sum(tf.abs(weights[i_layer1]), keepdims=False)
+        regular_b = regular_b + tf.reduce_sum(tf.abs(biases[i_layer1]), keepdims=False)
     return regular_w + regular_b
 
 
@@ -517,8 +517,8 @@ def regular_weights_biases_L2(weights, biases):
     regular_w = 0
     regular_b = 0
     for i_layer1 in range(layers):
-        regular_w = regular_w + tf.reduce_sum(tf.square(weights[i_layer1]), keep_dims=False)
-        regular_b = regular_b + tf.reduce_sum(tf.square(biases[i_layer1]), keep_dims=False)
+        regular_w = regular_w + tf.reduce_sum(tf.square(weights[i_layer1]), keepdims=False)
+        regular_b = regular_b + tf.reduce_sum(tf.square(biases[i_layer1]), keepdims=False)
     return regular_w + regular_b
 
 

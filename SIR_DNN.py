@@ -154,13 +154,13 @@ def solve_SIR2COVID(R):
 
     global_steps = tf.Variable(0, trainable=False)
     with tf.device('/gpu:%s' % (R['gpuNo'])):
-        with tf.variable_scope('vscope', reuse=tf.AUTO_REUSE):
-            T_it = tf.placeholder(tf.float32, name='T_it', shape=[None, input_dim])
-            S_observe = tf.placeholder(tf.float32, name='S_observe', shape=[None, input_dim])
-            I_observe = tf.placeholder(tf.float32, name='I_observe', shape=[None, input_dim])
-            N_observe = tf.placeholder(tf.float32, name='N_observe', shape=[None, input_dim])
-            predict_true_penalty = tf.placeholder_with_default(input=1e3, shape=[], name='bd_p')
-            in_learning_rate = tf.placeholder_with_default(input=1e-5, shape=[], name='lr')
+        with tf.compat.v1.variable_scope('vscope', reuse=tf.compat.v1.AUTO_REUSE):
+            T_it = tf.compat.v1.placeholder(tf.float32, name='T_it', shape=[None, input_dim])
+            S_observe = tf.compat.v1.placeholder(tf.float32, name='S_observe', shape=[None, input_dim])
+            I_observe = tf.compat.v1.placeholder(tf.float32, name='I_observe', shape=[None, input_dim])
+            N_observe = tf.compat.v1.placeholder(tf.float32, name='N_observe', shape=[None, input_dim])
+            predict_true_penalty = tf.compat.v1.placeholder_with_default(input=1e3, shape=[], name='bd_p')
+            in_learning_rate = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='lr')
 
             freq2SIR = R['freq2SIR']
             if 'DNN' == str.upper(R['model2SIR']):
@@ -356,7 +356,7 @@ def solve_SIR2COVID(R):
             Loss2N = predict_true_penalty * LossN_Net_obs + Loss2dN
             Loss = Loss2S + Loss2I + Loss2R + Loss2N + PWB2Beta + PWB2Gamma
 
-            my_optimizer = tf.train.AdamOptimizer(in_learning_rate)
+            my_optimizer = tf.compat.v1.train.AdamOptimizer(in_learning_rate)
             if R['train_model'] == 'train_group':
                 train_Loss2S = my_optimizer.minimize(Loss2S, global_step=global_steps)
                 train_Loss2I = my_optimizer.minimize(Loss2I, global_step=global_steps)
@@ -415,10 +415,10 @@ def solve_SIR2COVID(R):
     DNN_tools.log_string('The test data about s:\n%s\n' % str(np.transpose(s_obs_test)), log_fileout)
 
     # ConfigProto 加上allow_soft_placement=True就可以使用 gpu 了
-    config = tf.ConfigProto(allow_soft_placement=True)  # 创建sess的时候对sess进行参数配置
+    config = tf.compat.v1.ConfigProto(allow_soft_placement=True)  # 创建sess的时候对sess进行参数配置
     config.gpu_options.allow_growth = True              # True是让TensorFlow在运行过程中动态申请显存，避免过多的显存占用。
     config.allow_soft_placement = True                  # 当指定的设备不存在时，允许选择一个存在的设备运行。比如gpu不存在，自动降到cpu上运行
-    with tf.Session(config=config) as sess:
+    with tf.compat.v1.Session(config=config) as sess:
         sess.run(tf.global_variables_initializer())
         tmp_lr = init_lr
         for i_epoch in range(R['max_epoch'] + 1):
