@@ -136,6 +136,7 @@ def solve_SIRD2COVID(R):
     flag2D = 'WB2D'
     flag2beta = 'WB2beta'
     flag2gamma = 'WB2gamma'
+    flag2mu = 'WB2gamma'
     hidden_sird = R['hidden2SIRD']
     hidden_para = R['hidden2para']
 
@@ -153,9 +154,11 @@ def solve_SIRD2COVID(R):
     if str.upper(R['model2paras']) == 'DNN_FOURIERBASE':
         Weight2beta, Bias2beta = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_para, flag2beta)
         Weight2gamma, Bias2gamma = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_para, flag2gamma)
+        Weight2mu, Bias2mu = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_para, flag2mu)
     else:
         Weight2beta, Bias2beta = DNN_base.Xavier_init_NN(input_dim, out_dim, hidden_para, flag2beta)
         Weight2gamma, Bias2gamma = DNN_base.Xavier_init_NN(input_dim, out_dim, hidden_para, flag2gamma)
+        Weight2mu, Bias2mu = DNN_base.Xavier_init_NN(input_dim, out_dim, hidden_para, flag2mu)
 
     global_steps = tf.Variable(0, trainable=False)
     with tf.device('/gpu:%s' % (R['gpuNo'])):
@@ -166,8 +169,6 @@ def solve_SIRD2COVID(R):
             N_observe = tf.compat.v1.placeholder(tf.float32, name='N_observe', shape=[None, out_dim])
             predict_true_penalty = tf.compat.v1.placeholder_with_default(input=1e3, shape=[], name='pt_p')
             in_learning_rate = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='lr')
-            # in_beta = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='beta')
-            # in_gamma = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='gamma')
 
             freq2SIRD = R['freq2SIRD']
             if 'DNN' == str.upper(R['model2SIRD']):
@@ -204,22 +205,29 @@ def solve_SIRD2COVID(R):
                                        activate_name=act_func2paras)
                 in_gamma = DNN_base.DNN(T_it, Weight2gamma, Bias2gamma, hidden_para,
                                         activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                in_mu = DNN_base.DNN(T_it, Weight2mu, Bias2mu, hidden_para,
+                                     activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
             elif 'DNN_SCALE' == str.upper(R['model2paras']):
                 in_beta = DNN_base.DNN_scale(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
                 in_gamma = DNN_base.DNN_scale(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
                                               activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                in_mu = DNN_base.DNN_scale(T_it, Weight2mu, Bias2mu, hidden_para, freq2paras,
+                                           activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
             elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
                 in_beta = DNN_base.DNN_FourierBase(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                    activate_name=act_func2paras, sFourier=1.0)
                 in_gamma = DNN_base.DNN_FourierBase(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
                                                     activate_name=act_func2paras, sFourier=1.0)
+                in_mu = DNN_base.DNN_FourierBase(T_it, Weight2mu, Bias2mu, hidden_para, freq2paras,
+                                                 activate_name=act_func2paras, sFourier=1.0)
 
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
             # 在归一化条件下: 如果总的“人口”和归一化"人口"的数值一致，这样的话，归一化后的数值会很小
             if (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
                 beta = tf.square(in_beta)
                 gamma = tf.nn.sigmoid(in_gamma)
+                mu = tf.nn.sigmoid(in_mu)
                 # S_NN = SNN_temp
                 # I_NN = INN_temp
                 # R_NN = RNN_temp
@@ -267,6 +275,7 @@ def solve_SIRD2COVID(R):
             else:
                 beta = tf.square(in_beta)
                 gamma = tf.nn.sigmoid(in_gamma)
+                mu = tf.nn.sigmoid(in_mu)
 
                 # S_NN = SNN_temp
                 # I_NN = INN_temp
@@ -296,10 +305,10 @@ def solve_SIRD2COVID(R):
             dD_NN2t = tf.gradients(D_NN, T_it)[0]
             dN_NN2t = tf.gradients(N_NN, T_it)[0]
 
-            temp_snn2t = -beta*S_NN*I_NN
-            temp_inn2t = beta*S_NN*I_NN - gamma * I_NN
+            temp_snn2t = -beta*S_NN*I_NN/(S_NN + I_NN)
+            temp_inn2t = beta*S_NN*I_NN - gamma * I_NN - mu * I_NN
             temp_rnn2t = gamma *I_NN
-            temp_dnn2t = gamma * I_NN
+            temp_dnn2t = mu * I_NN
 
             if str.lower(R['loss_function']) == 'l2_loss' and R['scale_up'] == 0:
                 # LossS_Net_obs = tf.reduce_mean(tf.square(S_NN - S_observe))
@@ -359,6 +368,7 @@ def solve_SIRD2COVID(R):
                 regular_WB2D = DNN_base.regular_weights_biases_L1(Weight2D, Bias2D)
                 regular_WB2Beta = DNN_base.regular_weights_biases_L1(Weight2beta, Bias2beta)
                 regular_WB2Gamma = DNN_base.regular_weights_biases_L1(Weight2gamma, Bias2gamma)
+                regular_WB2Mu = DNN_base.regular_weights_biases_L1(Weight2mu, Bias2mu)
             elif R['regular_weight_model'] == 'L2':
                 regular_WB2S = DNN_base.regular_weights_biases_L2(Weight2S, Bias2S)
                 regular_WB2I = DNN_base.regular_weights_biases_L2(Weight2I, Bias2I)
@@ -366,6 +376,7 @@ def solve_SIRD2COVID(R):
                 regular_WB2D = DNN_base.regular_weights_biases_L2(Weight2D, Bias2D)
                 regular_WB2Beta = DNN_base.regular_weights_biases_L2(Weight2beta, Bias2beta)
                 regular_WB2Gamma = DNN_base.regular_weights_biases_L2(Weight2gamma, Bias2gamma)
+                regular_WB2Mu = DNN_base.regular_weights_biases_L2(Weight2mu, Bias2mu)
             else:
                 regular_WB2S = tf.constant(0.0)
                 regular_WB2I = tf.constant(0.0)
@@ -373,6 +384,7 @@ def solve_SIRD2COVID(R):
                 regular_WB2D = tf.constant(0.0)
                 regular_WB2Beta = tf.constant(0.0)
                 regular_WB2Gamma = tf.constant(0.0)
+                regular_WB2Mu = tf.constant(0.0)
 
             PWB2S = wb_penalty*regular_WB2S
             PWB2I = wb_penalty*regular_WB2I
@@ -380,6 +392,7 @@ def solve_SIRD2COVID(R):
             PWB2D = wb_penalty * regular_WB2D
             PWB2Beta = wb_penalty * regular_WB2Beta
             PWB2Gamma = wb_penalty * regular_WB2Gamma
+            PWB2Mu = wb_penalty * regular_WB2Mu
 
             Loss2S = Loss2dS + PWB2S
             Loss2I = predict_true_penalty * LossI_Net_obs + Loss2dI + PWB2I
@@ -387,7 +400,7 @@ def solve_SIRD2COVID(R):
             Loss2D = Loss2dD + PWB2D
             Loss2N = LossN_Net_obs + Loss2dN
 
-            Loss = Loss2S + Loss2I + Loss2R + Loss2D + Loss2N + PWB2Beta + PWB2Gamma
+            Loss = Loss2S + Loss2I + Loss2R + Loss2D + Loss2N + PWB2Beta + PWB2Gamma + PWB2Mu
 
             my_optimizer = tf.compat.v1.train.AdamOptimizer(in_learning_rate)
             if R['train_model'] == 'train_group':
