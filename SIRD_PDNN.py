@@ -299,7 +299,8 @@ def solve_SIRD2COVID(R):
 
             _, loss_s, loss_i, loss_r, loss_d, loss, pwb2beta, pwb2gamma, pwb2mu = sess.run(
                 [train_Losses, Loss2dS, Loss2dI, Loss2dR, Loss2dD, Loss, PWB2Beta, PWB2Gamma, PWB2Mu],
-                feed_dict={T_train: t_batch, I_observe: i_obs, in_learning_rate: tmp_lr})
+                feed_dict={T_train: t_batch, S_observe: s_obs, I_observe: i_obs, R_observe: r_obs, D_observe: d_obs,
+                           in_learning_rate: tmp_lr})
 
             loss_s_all.append(loss_s)
             loss_i_all.append(loss_i)
@@ -341,12 +342,14 @@ def solve_SIRD2COVID(R):
         plotData.plotTrain_loss_1act_func(loss_d_all, lossType='loss2d', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
 
-        saveData.save_SIR_testParas2mat_Covid(beta_test, gamma_test, name2para1='beta2test', name2para2='gamma2test',
-                                              outPath=R['FolderName'])
+        saveData.save_SIRD_testParas2mat_Covid(test_beta, test_gamma, test_mu, name2para1='beta2test',
+                                               name2para2='gamma2test', name2para3='mu2test', outPath=R['FolderName'])
 
-        plotData.plot_testSolu2convid(beta_test, name2solu='beta_test', coord_points2test=test_t_bach,
+        plotData.plot_testSolu2convid(test_beta, name2solu='beta_test', coord_points2test=test_t_bach,
                                       outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(gamma_test, name2solu='gamma_test', coord_points2test=test_t_bach,
+        plotData.plot_testSolu2convid(test_gamma, name2solu='gamma_test', coord_points2test=test_t_bach,
+                                      outPath=R['FolderName'])
+        plotData.plot_testSolu2convid(test_mu, name2solu='mu_test', coord_points2test=test_t_bach,
                                       outPath=R['FolderName'])
 
 
