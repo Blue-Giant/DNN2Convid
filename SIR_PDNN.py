@@ -100,9 +100,9 @@ def solve_SIR2COVID(R):
     flag2gamma = 'WB2gamma'                            # gamma 的网络的变量空间标识
     hidden_para = R['hidden2para']
 
-    AI = tf.eye(batchSize_train, dtype=tf.float32) * 9
+    AI = tf.eye(batchSize_train, dtype=tf.float32) * 2
     Ones_mat = tf.ones([batchSize_train, batchSize_train], dtype=tf.float32)
-    A_diag = tf.linalg.band_part(Ones_mat, 1, 1)
+    A_diag = tf.linalg.band_part(Ones_mat, 0, 1)
     Amat = AI - A_diag
 
     # 初始化神经网络的参数及其方式
@@ -125,22 +125,22 @@ def solve_SIR2COVID(R):
 
             freq2paras = R['freq2paras']
             if 'DNN' == str.upper(R['model2paras']):
-                in_beta = DNN_base.DNN(T_it, Weight2beta, Bias2beta, hidden_para, activateIn_name=R['actIn_Name2paras'],
-                                       activate_name=act_func2paras)
-                in_gamma = DNN_base.DNN(T_it, Weight2gamma, Bias2gamma, hidden_para,
-                                        activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                in_beta2train = DNN_base.DNN(T_it, Weight2beta, Bias2beta, hidden_para,
+                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                in_gamma2train = DNN_base.DNN(T_it, Weight2gamma, Bias2gamma, hidden_para,
+                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
 
                 in_beta2test = DNN_base.DNN(T_test, Weight2beta, Bias2beta, hidden_para,
                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
                 in_gamma2test = DNN_base.DNN(T_test, Weight2gamma, Bias2gamma, hidden_para,
                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
             elif 'DNN_SCALE' == str.upper(R['model2paras']):
-                in_beta = DNN_base.DNN_scale(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
-                                             repeat_Highfreq=R['if_repeat_High_freq2paras'])
-                in_gamma = DNN_base.DNN_scale(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
-                                              repeat_Highfreq=R['if_repeat_High_freq2paras'])
+                in_beta2train = DNN_base.DNN_scale(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
+                                                   activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
+                                                   repeat_Highfreq=R['if_repeat_High_freq2paras'])
+                in_gamma2train = DNN_base.DNN_scale(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
+                                                    activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
+                                                    repeat_Highfreq=R['if_repeat_High_freq2paras'])
                 in_beta2test = DNN_base.DNN_scale(T_test, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                   activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
                                                   repeat_Highfreq=R['if_repeat_High_freq2paras'])
@@ -148,12 +148,12 @@ def solve_SIR2COVID(R):
                                                    activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras,
                                                    repeat_Highfreq=R['if_repeat_High_freq2paras'])
             elif str.upper(R['model2paras']) == 'DNN_FOURIERBASE':
-                in_beta = DNN_base.DNN_FourierBase(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                                   activate_name=act_func2paras, sFourier=1.0,
-                                                   repeat_Highfreq=R['if_repeat_High_freq2paras'])
-                in_gamma = DNN_base.DNN_FourierBase(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                                    activate_name=act_func2paras, sFourier=1.0,
-                                                    repeat_Highfreq=R['if_repeat_High_freq2paras'])
+                in_beta2train = DNN_base.DNN_FourierBase(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
+                                                         activate_name=act_func2paras, sFourier=1.0,
+                                                         repeat_Highfreq=R['if_repeat_High_freq2paras'])
+                in_gamma2train = DNN_base.DNN_FourierBase(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
+                                                          activate_name=act_func2paras, sFourier=1.0,
+                                                          repeat_Highfreq=R['if_repeat_High_freq2paras'])
                 in_beta2test = DNN_base.DNN_FourierBase(T_test, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                         activate_name=act_func2paras, sFourier=1.0,
                                                         repeat_Highfreq=R['if_repeat_High_freq2paras'])
@@ -162,40 +162,29 @@ def solve_SIR2COVID(R):
                                                          repeat_Highfreq=R['if_repeat_High_freq2paras'])
 
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
-            # 在归一化条件下: 如果总的“人口”和归一化"人口"的数值一致，这样的话，归一化后的数值会很小
-            if (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
-                beta = tf.square(in_beta)
-                gamma = tf.nn.sigmoid(in_gamma)
+            betaNN2train = tf.square(in_beta2train)
+            gammaNN2train = tf.nn.sigmoid(in_gamma2train)
 
-                beta2test = tf.square(in_beta2test)
-                gamma2test = tf.nn.sigmoid(in_gamma2test)
-            else:
-                beta = tf.square(in_beta)
-                gamma = tf.nn.sigmoid(in_gamma)
+            betaNN2test = tf.square(in_beta2test)
+            gammaNN2test = tf.nn.sigmoid(in_gamma2test)
 
-                beta2test = tf.square(in_beta2test)
-                gamma2test = tf.nn.sigmoid(in_gamma2test)
-            Loss2dS = 0.0
-            Loss2dI = 0.0
-            Loss2dR = 0.0
-            for count_obs in range(batchSize_train-1):
-                temp = S_observe[count_obs+1, 0]
-                dS2dt = S_observe[count_obs+1, 0] - S_observe[count_obs, 0]
-                dI2dt = I_observe[count_obs+1, 0] - I_observe[count_obs, 0]
-                dR2dt = R_observe[count_obs+1, 0] - R_observe[count_obs, 0]
+            dS2dt = tf.matmul(Amat[0:-1, :], S_observe)
+            dI2dt = tf.matmul(Amat[0:-1, :], I_observe)
+            dR2dt = tf.matmul(Amat[0:-1, :], R_observe)
 
-                temp_s2t = -beta[count_obs, 0]*S_observe[count_obs, 0]*I_observe[count_obs, 0]
-                temp_i2t = beta[count_obs, 0]*S_observe[count_obs, 0]*I_observe[count_obs, 0] - gamma[count_obs, 0] * I_observe[count_obs, 0]
-                temp_r2t = gamma[count_obs, 0] * I_observe[count_obs, 0]
+            temp_s2t = -betaNN2train[0:-1, 0]*S_observe[0:-1, 0]*I_observe[0:-1, 0]
+            temp_i2t = betaNN2train[0:-1, 0]*S_observe[0:-1, 0]*I_observe[0:-1, 0] - \
+                       gammaNN2train[0:-1, 0] * I_observe[0:-1, 0]
+            temp_r2t = gammaNN2train[0:-1, 0] * I_observe[0:-1, 0]
 
-                if str.lower(R['loss_function']) == 'l2_loss':
-                    Loss2dS = Loss2dS + tf.square(dS2dt - temp_s2t)
-                    Loss2dI = Loss2dI + tf.square(dI2dt - temp_i2t)
-                    Loss2dR = Loss2dR + tf.square(dR2dt - temp_r2t)
-                elif str.lower(R['loss_function']) == 'lncosh_loss':
-                    Loss2dS = Loss2dS + tf.log(tf.cosh(dS2dt - temp_s2t))
-                    Loss2dI = Loss2dI + tf.log(tf.cosh(dI2dt - temp_i2t))
-                    Loss2dR = Loss2dR + tf.log(tf.cosh(dR2dt - temp_r2t))
+            if str.lower(R['loss_function']) == 'l2_loss':
+                Loss2dS = tf.reduce_mean(tf.square(dS2dt - tf.reshape(temp_s2t, shape=[-1, 1])))
+                Loss2dI = tf.reduce_mean(tf.square(dI2dt - tf.reshape(temp_i2t, shape=[-1, 1])))
+                Loss2dR = tf.reduce_mean(tf.square(dR2dt - tf.reshape(temp_r2t, shape=[-1, 1])))
+            elif str.lower(R['loss_function']) == 'lncosh_loss':
+                Loss2dS = tf.reduce_mean(tf.log(tf.cosh(dS2dt - tf.reshape(temp_s2t, shape=[-1, 1]))))
+                Loss2dI = tf.reduce_mean(tf.log(tf.cosh(dI2dt - tf.reshape(temp_i2t, shape=[-1, 1]))))
+                Loss2dR = tf.reduce_mean(tf.log(tf.cosh(dR2dt - tf.reshape(temp_r2t, shape=[-1, 1]))))
 
             if R['regular_weight_model'] == 'L1':
                 regular_WB2Beta = DNN_base.regular_weights_biases_L1(Weight2beta, Bias2beta)
@@ -216,9 +205,8 @@ def solve_SIR2COVID(R):
             train_Losses = my_optimizer.minimize(Loss, global_step=global_steps)
 
     t0 = time.time()
-    loss_s_all, loss_i_all, loss_r_all, loss_n_all, loss_all = [], [], [], [], []
+    loss_s_all, loss_i_all, loss_r_all, loss_all = [], [], [], []
     test_epoch = []
-    test_mse2I_all, test_rel2I_all = [], []
 
     # filename = 'data2csv/Wuhan.csv'
     # filename = 'data2csv/Italia_data.csv'
@@ -275,58 +263,35 @@ def solve_SIR2COVID(R):
                 DNN_data.randSample_Normalize_3existData(train_date, train_data2i, train_data2s, batchsize=batchSize_train,
                                                          normalFactor=1.0, sampling_opt=R['opt2sample'])
             tmp_lr = tmp_lr * (1 - lr_decay)
-            _, loss = sess.run([train_Losses, Loss], feed_dict={T_it: t_batch, I_observe: i_obs, S_observe:s_obs,
-                                                                in_learning_rate: tmp_lr})
+            _, loss, loss_s, loss_i, loss_r, train_beta, train_gamma = sess.run(
+                [train_Losses, Loss, Loss2dS, Loss2dI, Loss2dR, betaNN2train, gammaNN2train],
+                feed_dict={T_it: t_batch, I_observe: i_obs, S_observe: s_obs, R_observe: r_obs, in_learning_rate: tmp_lr})
             loss_all.append(loss)
+            loss_s_all.append(loss_s)
+            loss_i_all.append(loss_i)
+            loss_r_all.append(loss_r)
 
             if i_epoch % 1000 == 0:
-                # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, beta, gamma 的训练结果
+                # 以下代码为输出训练过程中 beta, gamma 的训练结果
                 print_and_log2train(i_epoch, time.time() - t0, tmp_lr, loss, log_out=log_fileout)
 
-                s_nn2train, i_nn2train, r_nn2train = sess.run(
-                    [SNN, INN, RNN], feed_dict={T_it: np.reshape(train_date, [-1, 1])})
-
-                # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, beta, gamma 的测试结果
+                # 以下代码为输出训练过程中 beta, gamma 的测试结果
                 test_epoch.append(i_epoch / 1000)
-                s_nn2test, i_nn2test, r_nn2test, beta_test, gamma_test = sess.run(
-                    [SNN, INN, RNN, beta, gamma], feed_dict={T_it: test_t_bach})
-                point_ERR2I = np.square(i_nn2test - i_obs_test)
-                test_mse2I = np.mean(point_ERR2I)
-                test_mse2I_all.append(test_mse2I)
-                test_rel2I = test_mse2I / np.mean(np.square(i_obs_test))
-                test_rel2I_all.append(test_rel2I)
+                test_beta, test_gamma = sess.run([betaNN2test, gammaNN2test], feed_dict={T_it: test_t_bach})
 
-                DNN_tools.print_and_log_test_one_epoch(test_mse2I, test_rel2I, log_out=log_fileout)
-                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testSolus)
-                DNN_tools.log_string('The test result for s:\n%s\n' % str(np.transpose(s_nn2test)), log2testSolus)
-                DNN_tools.log_string('The test result for i:\n%s\n' % str(np.transpose(i_nn2test)), log2testSolus)
-                DNN_tools.log_string('The test result for r:\n%s\n\n' % str(np.transpose(r_nn2test)), log2testSolus)
+                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testParas)
+                DNN_tools.log_string('The test result for beta:\n%s\n' % str(np.transpose(test_beta)), log2testParas)
+                DNN_tools.log_string('The test result for gamma:\n%s\n' % str(np.transpose(test_gamma)), log2testParas)
 
-                # --------以下代码为输出训练过程中 S_NN_temp, I_NN_temp, R_NN_temp, in_beta, in_gamma 的测试结果-------------
-                s_nn_temp2test, i_nn_temp2test, r_nn_temp2test, in_beta_test, in_gamma_test = sess.run(
-                    [SNN_temp, INN_temp, RNN_temp, in_beta, in_gamma],
-                    feed_dict={T_it: test_t_bach})
-
-                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testSolus2)
-                DNN_tools.log_string('The test result for s_temp:\n%s\n' % str(np.transpose(s_nn_temp2test)), log2testSolus2)
-                DNN_tools.log_string('The test result for i_temp:\n%s\n' % str(np.transpose(i_nn_temp2test)), log2testSolus2)
-                DNN_tools.log_string('The test result for r_temp:\n%s\n\n' % str(np.transpose(r_nn_temp2test)), log2testSolus2)
+                # --------以下代码为输出训练过程中 in_beta, in_gamma 的测试结果-------------
+                in_beta_test, in_gamma_test = sess.run([in_beta2test, in_gamma2test], feed_dict={T_it: test_t_bach})
 
                 DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testParas)
                 DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_beta_test)), log2testParas)
                 DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_gamma_test)), log2testParas)
 
-        DNN_tools.log_string('The train result for S:\n%s\n' % str(np.transpose(s_nn2train)), log2trianSolus)
-        DNN_tools.log_string('The train result for I:\n%s\n' % str(np.transpose(i_nn2train)), log2trianSolus)
-        DNN_tools.log_string('The train result for R:\n%s\n\n' % str(np.transpose(r_nn2train)), log2trianSolus)
-
-        saveData.true_value2convid(train_data2i, name2Array='itrue2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(s_nn2train, name2solus='s2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(i_nn2train, name2solus='i2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(r_nn2train, name2solus='r2train', outPath=R['FolderName'])
-
-        saveData.save_SIR_trainLoss2mat_Covid(loss_s_all, loss_i_all, loss_r_all, loss_n_all, actName=act_func2SIR,
-                                              outPath=R['FolderName'])
+        saveData.save_SIR_trainLoss2mat(loss_s_all, loss_i_all, loss_r_all, loss_all, actName=act_func2paras,
+                                        outPath=R['FolderName'])
 
         plotData.plotTrain_loss_1act_func(loss_s_all, lossType='loss2s', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
@@ -334,33 +299,15 @@ def solve_SIR2COVID(R):
                                           yaxis_scale=True)
         plotData.plotTrain_loss_1act_func(loss_r_all, lossType='loss2r', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
-        plotData.plotTrain_loss_1act_func(loss_n_all, lossType='loss2n', seedNo=R['seed'], outPath=R['FolderName'],
+        plotData.plotTrain_loss_1act_func(loss_all, lossType='loss', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
 
-        saveData.true_value2convid(i_obs_test, name2Array='i_true2test', outPath=R['FolderName'])
-        saveData.save_testMSE_REL2mat(test_mse2I_all, test_rel2I_all, actName='Infected', outPath=R['FolderName'])
-        plotData.plotTest_MSE_REL(test_mse2I_all, test_rel2I_all, test_epoch, actName='Infected', seedNo=R['seed'],
-                                  outPath=R['FolderName'], yaxis_scale=True)
-        saveData.save_SIR_testSolus2mat_Covid(s_nn2test, i_nn2test, r_nn2test, name2solus1='snn2test',
-                                              name2solus2='inn2test', name2solus3='rnn2test', outPath=R['FolderName'])
-        saveData.save_SIR_testParas2mat_Covid(beta_test, gamma_test, name2para1='beta2test', name2para2='gamma2test',
+        saveData.save_SIR_testParas2mat_Covid(test_beta, test_gamma, name2para1='beta2test', name2para2='gamma2test',
                                               outPath=R['FolderName'])
 
-        plotData.plot_testSolu2convid(i_obs_test, name2solu='i_true', coord_points2test=test_t_bach,
+        plotData.plot_testSolu2convid(test_beta, name2solu='beta_test', coord_points2test=test_t_bach,
                                       outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(s_nn2test, name2solu='s_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(i_nn2test, name2solu='i_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(r_nn2test, name2solu='r_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-
-        plotData.plot_testSolus2convid(i_obs_test, i_nn2test, name2solu1='i_true', name2solu2='i_test',
-                                       coord_points2test=test_t_bach, seedNo=R['seed'], outPath=R['FolderName'])
-
-        plotData.plot_testSolu2convid(beta_test, name2solu='beta_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(gamma_test, name2solu='gamma_test', coord_points2test=test_t_bach,
+        plotData.plot_testSolu2convid(test_gamma, name2solu='gamma_test', coord_points2test=test_t_bach,
                                       outPath=R['FolderName'])
 
 
