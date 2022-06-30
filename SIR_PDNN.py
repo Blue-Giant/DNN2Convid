@@ -61,14 +61,25 @@ def dictionary_out2file(R_dic, log_fileout):
     DNN_tools.log_string('Batch-size 2 testing: %s\n' % str(R_dic['batch_size2test']), log_fileout)
 
 
-def print_and_log2train(i_epoch, run_time, tmp_lr, loss_n, log_out=None):
+def print_and_log2train(i_epoch, run_time, tmp_lr, loss_all, loss_s, loss_i, loss_r, penalty_wb2beta,
+                        penalty_wb2gamma, log_out=None):
     print('train epoch: %d, time: %.3f' % (i_epoch, run_time))
     print('learning rate: %f' % tmp_lr)
-    print('total loss: %.16f\n' % loss_n)
+    print('penalty weights and biases for Beta: %f' % penalty_wb2beta)
+    print('penalty weights and biases for Gamma: %f' % penalty_wb2gamma)
+    print('loss for S: %.16f' % loss_s)
+    print('loss for I: %.16f' % loss_i)
+    print('loss for R: %.16f' % loss_r)
+    print('total loss: %.16f\n' % loss_all)
 
     DNN_tools.log_string('train epoch: %d,time: %.3f' % (i_epoch, run_time), log_out)
     DNN_tools.log_string('learning rate: %f' % tmp_lr, log_out)
-    DNN_tools.log_string('total loss: %.16f \n\n' % loss_n, log_out)
+    DNN_tools.log_string('penalty weights and biases for Beta: %f' % penalty_wb2beta, log_out)
+    DNN_tools.log_string('penalty weights and biases for Gamma: %f' % penalty_wb2gamma, log_out)
+    DNN_tools.log_string('loss for S: %.16f' % loss_s, log_out)
+    DNN_tools.log_string('loss for I: %.16f' % loss_i, log_out)
+    DNN_tools.log_string('loss for R: %.16f' % loss_r, log_out)
+    DNN_tools.log_string('total loss: %.16f \n\n' % loss_all, log_out)
 
 
 def solve_SIR2COVID(R):
@@ -77,10 +88,6 @@ def solve_SIR2COVID(R):
         os.mkdir(log_out_path)            # 无 log_out_path 路径，创建一个 log_out_path 路径
     log_fileout = open(os.path.join(log_out_path, 'log_train.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
     dictionary_out2file(R, log_fileout)
-
-    log2trianSolus = open(os.path.join(log_out_path, 'train_Solus.txt'), 'w')      # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    log2testSolus = open(os.path.join(log_out_path, 'test_Solus.txt'), 'w')        # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    log2testSolus2 = open(os.path.join(log_out_path, 'test_Solus_temp.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
     log2testParas = open(os.path.join(log_out_path, 'test_Paras.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
@@ -266,8 +273,8 @@ def solve_SIR2COVID(R):
                 DNN_data.randSample_Normalize_3existData(train_date, train_data2i, train_data2s, batchsize=batchSize_train,
                                                          normalFactor=1.0, sampling_opt=R['opt2sample'])
             tmp_lr = tmp_lr * (1 - lr_decay)
-            _, loss, loss_s, loss_i, loss_r, train_beta, train_gamma = sess.run(
-                [train_Losses, Loss, Loss2dS, Loss2dI, Loss2dR, betaNN2train, gammaNN2train],
+            _, loss, loss_s, loss_i, loss_r, pwb2beta, pwb2gamma = sess.run(
+                [train_Losses, Loss, Loss2dS, Loss2dI, Loss2dR, PWB2Beta, PWB2Gamma],
                 feed_dict={T_train: t_batch, I_observe: i_obs, S_observe: s_obs, R_observe: r_obs, in_learning_rate: tmp_lr})
             loss_all.append(loss)
             loss_s_all.append(loss_s)
@@ -275,7 +282,8 @@ def solve_SIR2COVID(R):
             loss_r_all.append(loss_r)
 
             if i_epoch % 1000 == 0:
-                print_and_log2train(i_epoch, time.time() - t0, tmp_lr, loss, log_out=log_fileout)
+                print_and_log2train(i_epoch, time.time() - t0, tmp_lr, loss, loss_s, loss_i, loss_r, pwb2beta,
+                                    pwb2gamma, log_out=log_fileout)
 
                 # 以下代码为输出训练过程中 beta, gamma 的测试结果
                 test_epoch.append(i_epoch / 1000)
@@ -292,6 +300,7 @@ def solve_SIR2COVID(R):
                 DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_beta_test)), log2testParas)
                 DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_gamma_test)), log2testParas)
 
+        # 训练完成，保存最终的结果并画图
         saveData.save_SIR_trainLoss2mat(loss_s_all, loss_i_all, loss_r_all, loss_all, actName=act_func2paras,
                                         outPath=R['FolderName'])
 
