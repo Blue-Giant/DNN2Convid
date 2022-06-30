@@ -108,7 +108,6 @@ def solve_SIRD2COVID(R):
     trainSet_szie = R['size2train']                   # 训练集大小,给定一个数据集，拆分训练集和测试集时，需要多大规模的训练集
     batchSize_train = R['batch_size2train']           # 训练批量的大小,该值远小于训练集大小
     batchSize_test = R['batch_size2test']             # 测试批量的大小,该值小于等于测试集大小
-    pt_penalty_init = R['init_penalty2predict_true']  # 预测值和真值得误差惩罚因子的初值,用于处理那些具有真实值得变量
     wb_penalty = R['regular_weight']                  # 神经网络参数的惩罚因子
     lr_decay = R['lr_decay']                          # 学习率额衰减
     init_lr = R['learning_rate']                      # 初始学习率
@@ -205,10 +204,11 @@ def solve_SIRD2COVID(R):
             dR2dt = tf.matmul(Amat[0:-1, :], R_observe)
             dD2dt = tf.matmul(Amat[0:-1, :], D_observe)
 
-            temp_s2t = -betaNN2train[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0]
-            temp_i2t = betaNN2train[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0] - gamma[0:-1, 0] * I_observe[0:-1, 0]
-            temp_r2t = gamma[0:-1, 0] * I_observe[0:-1, 0]
-            temp_d2t = gamma[0:-1, 0] * I_observe[0:-1, 0]
+            temp_s2t = -betaNN2train[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0]/(S_observe[0:-1, 0] + I_observe[0:-1, 0])
+            temp_i2t = betaNN2train[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0]/(S_observe[0:-1, 0] + I_observe[0:-1, 0]) - \
+                       gammaNN2train[0:-1, 0] * I_observe[0:-1, 0] - muNN2train[0:-1, 0] * I_observe[0:-1, 0]
+            temp_r2t = gammaNN2train[0:-1, 0] * I_observe[0:-1, 0]
+            temp_d2t = muNN2train[0:-1, 0] * I_observe[0:-1, 0]
 
             if str.lower(R['loss_function']) == 'l2_loss':
                 Loss2dS = tf.reduce_mean(tf.square(dS2dt - tf.reshape(temp_s2t, shape=[-1, 1])))
@@ -505,27 +505,13 @@ if __name__ == "__main__":
         R['learning_rate'] = 5e-5             # 学习率
         R['lr_decay'] = 1e-5                  # 学习率 decay
 
-    # SIRD和参数网络模型的选择
-    # R['model2SIRD'] = 'DNN'
-    # R['model2SIRD'] = 'DNN_scale'
-    # R['model2SIRD'] = 'DNN_scaleOut'
-    R['model2SIRD'] = 'DNN_FourierBase'
-
+    # SIRD参数网络模型的选择
     # R['model2paras'] = 'DNN'
     # R['model2paras'] = 'DNN_scale'
     # R['model2paras'] = 'DNN_scaleOut'
     R['model2paras'] = 'DNN_FourierBase'
 
-    # SIRD和参数网络模型的隐藏层单元数目
-    if R['model2SIRD'] == 'DNN_FourierBase':
-        R['hidden2SIRD'] = (35, 50, 30, 30, 20)  # 1*50+50*50+50*30+30*30+30*20+20*1 = 5570
-    else:
-        # R['hidden2SIRD'] = (10, 10, 8, 6, 6, 3)        # it is used to debug our work
-        R['hidden2SIRD'] = (70, 50, 30, 30, 20)  # 1*50+50*50+50*30+30*30+30*20+20*1 = 5570
-        # R['hidden2SIRD'] = (80, 80, 60, 40, 40, 20)    # 80+80*80+80*60+60*40+40*40+40*20+20*1 = 16100
-        # R['hidden2SIRD'] = (100, 100, 80, 60, 60, 40)
-        # R['hidden2SIRD'] = (200, 100, 100, 80, 50, 50)
-
+    # SIRD参数网络模型的隐藏层单元数目
     if R['model2paras'] == 'DNN_FourierBase':
         R['hidden2para'] = (35, 50, 30, 30, 20)  # 1*50+50*50+50*30+30*30+30*20+20*1 = 5570
     else:
@@ -535,45 +521,15 @@ if __name__ == "__main__":
         # R['hidden2para'] = (100, 100, 80, 60, 60, 40)
         # R['hidden2para'] = (200, 100, 100, 80, 50, 50)
 
-    # SIRD和参数网络模型的尺度因子
-    if R['model2SIRD'] != 'DNN':
-        R['freq2SIRD'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
+    # SIRD参数网络模型的尺度因子
     if R['model2paras'] != 'DNN':
         R['freq2paras'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
 
-    # SIRD和参数网络模型为傅里叶网络和尺度网络时，重复高频因子或者低频因子
-    if R['model2SIRD'] == 'DNN_FourierBase' or R['model2SIRD'] == 'DNN_scale':
-        R['if_repeat_High_freq2SIRD'] = False
+    # SIRD参数网络模型为傅里叶网络和尺度网络时，重复高频因子或者低频因子
     if R['model2paras'] == 'DNN_FourierBase' or R['model2paras'] == 'DNN_scale':
         R['if_repeat_High_freq2paras'] = False
 
-    # SIRD和参数网络模型的激活函数的选择
-    # R['actIn_Name2SIRD'] = 'relu'
-    # R['actIn_Name2SIRD'] = 'leaky_relu'
-    # R['actIn_Name2SIRD'] = 'sigmod'
-    R['actIn_Name2SIRD'] = 'tanh'
-    # R['actIn_Name2SIRD'] = 'srelu'
-    # R['actIn_Name2SIRD'] = 's2relu'
-    # R['actIn_Name2SIRD'] = 'sin'
-    # R['actIn_Name2SIRD'] = 'sinAddcos'
-    # R['actIn_Name2SIRD'] = 'elu'
-    # R['actIn_Name2SIRD'] = 'gelu'
-    # R['actIn_Name2SIRD'] = 'mgelu'
-    # R['actIn_Name2SIRD'] = 'linear'
-
-    # R['act_Name2SIRD'] = 'relu'
-    # R['act_Name2SIRD'] = 'leaky_relu'
-    # R['act_Name2SIRD'] = 'sigmod'
-    R['act_Name2SIRD'] = 'tanh'  # 这个激活函数比较s2ReLU合适
-    # R['act_Name2SIRD'] = 'srelu'
-    # R['act_Name2SIRD'] = 's2relu'
-    # R['act_Name2SIRD'] = 'sin'
-    # R['act_Name2SIRD'] = 'sinAddcos'
-    # R['act_Name2SIRD'] = 'elu'
-    # R['act_Name2SIRD'] = 'gelu'
-    # R['act_Name2SIRD'] = 'mgelu'
-    # R['act_Name2SIRD'] = 'linear'
-
+    # SIRD参数网络模型的激活函数的选择
     # R['actIn_Name2paras'] = 'relu'
     # R['actIn_Name2paras'] = 'leaky_relu'
     # R['actIn_Name2paras'] = 'sigmoid'
