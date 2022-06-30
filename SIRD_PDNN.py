@@ -16,6 +16,8 @@ import DNN_data
 import plotData
 import saveData
 
+# Reference paper: A flexible rolling regression framework for the identification of time-varying SIRD models
+
 
 # 记录字典中的一些设置
 def dictionary_out2file(R_dic, log_fileout):
@@ -92,6 +94,7 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, temp_penalty_nt, penalty_wb2s
     DNN_tools.log_string('total loss: %.16f \n\n' % loss_n, log_out)
 
 
+# Reference paper: A flexible rolling regression framework for the identification of time-varying SIRD models
 def solve_SIRD2COVID(R):
     log_out_path = R['FolderName']        # 将路径从字典 R 中提取出来
     if not os.path.exists(log_out_path):  # 判断路径是否已经存在
