@@ -98,10 +98,6 @@ def solve_SIRD2COVID(R):
     log_fileout = open(os.path.join(log_out_path, 'log_train.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
     dictionary_out2file(R, log_fileout)
 
-    log2trianSolus = open(os.path.join(log_out_path, 'train_Solus.txt'), 'w')      # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    log2testSolus = open(os.path.join(log_out_path, 'test_Solus.txt'), 'w')        # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    log2testSolus2 = open(os.path.join(log_out_path, 'test_Solus_temp.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
-
     log2testParas = open(os.path.join(log_out_path, 'test_Paras.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
     trainSet_szie = R['size2train']                   # 训练集大小,给定一个数据集，拆分训练集和测试集时，需要多大规模的训练集
@@ -312,11 +308,10 @@ def solve_SIRD2COVID(R):
             loss_all.append(loss)
 
             if i_epoch % 1000 == 0:
-                # 以下代码为输出训练过程中 beta, gamma, mu 的训练结果
                 print_and_log2train(i_epoch, time.time() - t0, tmp_lr, pwb2beta, pwb2gamma, pwb2mu, loss_s,
                                     loss_i, loss_r, loss_d, loss, log_out=log_fileout)
 
-                # 以下代码为输出训练过程中 beta, gamma 的测试结果
+                # 以下代码为输出训练过程中 beta, gamma, mu 的训练结果
                 test_epoch.append(i_epoch / 1000)
                 test_beta, test_gamma, test_mu = sess.run([betaNN2test, gammaNN2test, muNN2test],
                                                           feed_dict={T_test: test_t_bach})
@@ -325,27 +320,17 @@ def solve_SIRD2COVID(R):
                 DNN_tools.log_string('The test result for gamma:\n%s\n' % str(np.transpose(test_gamma)), log2testParas)
                 DNN_tools.log_string('The test result for mu:\n%s\n' % str(np.transpose(test_mu)), log2testParas)
 
-                # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, beta, gamma 的测试结果
-                in_test_beta, in_test_gamma, in_test_mu = sess.run([in_beta_test, in_gamma_test, in_mu2test],
+                # 以下代码为输出训练过程中  in_beta, in_gamma, in_mu 的测试结果
+                in_test_beta, in_test_gamma, in_test_mu = sess.run([in_beta2test, in_gamma2test, in_mu2test],
                                                                    feed_dict={T_test: test_t_bach})
 
-                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
-                                     log2testParas)
-                DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_test_beta)),
-                                     log2testParas)
-                DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_test_gamma)),
-                                     log2testParas)
-                DNN_tools.log_string('The test result for in_mu:\n%s\n' % str(np.transpose(in_test_mu)),
-                                     log2testParas)
+                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testParas)
+                DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_test_beta)), log2testParas)
+                DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_test_gamma)), log2testParas)
+                DNN_tools.log_string('The test result for in_mu:\n%s\n' % str(np.transpose(in_test_mu)), log2testParas)
 
-        saveData.true_value2convid(train_data2i, name2Array='itrue2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(s_nn2train, name2solus='s2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(i_nn2train, name2solus='i2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(r_nn2train, name2solus='r2train', outPath=R['FolderName'])
-        saveData.save_Solu2mat_Covid(d_nn2train, name2solus='d2train', outPath=R['FolderName'])
-
-        saveData.save_SIR_trainLoss2mat_Covid(loss_s_all, loss_i_all, loss_r_all, loss_n_all, actName=act_func2SIRD,
-                                              outPath=R['FolderName'])
+        saveData.save_SIRD_trainLoss2mat(loss_s_all, loss_i_all, loss_r_all, loss_d_all, actName=act_func2SIRD,
+                                         outPath=R['FolderName'])
 
         plotData.plotTrain_loss_1act_func(loss_s_all, lossType='loss2s', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
@@ -353,29 +338,11 @@ def solve_SIRD2COVID(R):
                                           yaxis_scale=True)
         plotData.plotTrain_loss_1act_func(loss_r_all, lossType='loss2r', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
-        plotData.plotTrain_loss_1act_func(loss_n_all, lossType='loss2n', seedNo=R['seed'], outPath=R['FolderName'],
+        plotData.plotTrain_loss_1act_func(loss_d_all, lossType='loss2d', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
 
-        saveData.true_value2convid(i_obs_test, name2Array='i_true2test', outPath=R['FolderName'])
-        saveData.save_testMSE_REL2mat(test_mse2I_all, test_rel2I_all, actName='Infected', outPath=R['FolderName'])
-        plotData.plotTest_MSE_REL(test_mse2I_all, test_rel2I_all, test_epoch, actName='Infected', seedNo=R['seed'],
-                                  outPath=R['FolderName'], yaxis_scale=True)
-        saveData.save_SIR_testSolus2mat_Covid(s_nn2test, i_nn2test, r_nn2test, name2solus1='snn2test',
-                                              name2solus2='inn2test', name2solus3='rnn2test', outPath=R['FolderName'])
         saveData.save_SIR_testParas2mat_Covid(beta_test, gamma_test, name2para1='beta2test', name2para2='gamma2test',
                                               outPath=R['FolderName'])
-
-        plotData.plot_testSolu2convid(i_obs_test, name2solu='i_true', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(s_nn2test, name2solu='s_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(i_nn2test, name2solu='i_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(r_nn2test, name2solu='r_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-
-        plotData.plot_testSolus2convid(i_obs_test, i_nn2test, name2solu1='i_true', name2solu2='i_test',
-                                       coord_points2test=test_t_bach, seedNo=R['seed'], outPath=R['FolderName'])
 
         plotData.plot_testSolu2convid(beta_test, name2solu='beta_test', coord_points2test=test_t_bach,
                                       outPath=R['FolderName'])
