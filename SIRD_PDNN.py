@@ -65,33 +65,29 @@ def dictionary_out2file(R_dic, log_fileout):
     DNN_tools.log_string('Batch-size 2 testing: %s\n' % str(R_dic['batch_size2test']), log_fileout)
 
 
-def print_and_log2train(i_epoch, run_time, tmp_lr, temp_penalty_nt, penalty_wb2s, penalty_wb2i, penalty_wb2r,
-                        penalty_wb2d, loss_s, loss_i, loss_r, loss_d, loss_n, log_out=None):
+def print_and_log2train(i_epoch, run_time, tmp_lr, penalty_wb2beta, penalty_wb2gamma, penalty_wb2mu, loss_s, loss_i,
+                        loss_r, loss_d, loss_all, log_out=None):
     print('train epoch: %d, time: %.3f' % (i_epoch, run_time))
     print('learning rate: %f' % tmp_lr)
-    print('penalty for difference of predict and true : %f' % temp_penalty_nt)
-    print('penalty weights and biases for S: %f' % penalty_wb2s)
-    print('penalty weights and biases for I: %f' % penalty_wb2i)
-    print('penalty weights and biases for R: %f' % penalty_wb2r)
-    print('penalty weights and biases for D: %f' % penalty_wb2d)
+    print('penalty weights and biases for Beta: %f' % penalty_wb2beta)
+    print('penalty weights and biases for Gamma: %f' % penalty_wb2gamma)
+    print('penalty weights and biases for Mu: %f' % penalty_wb2mu)
     print('loss for S: %.16f' % loss_s)
     print('loss for I: %.16f' % loss_i)
     print('loss for R: %.16f' % loss_r)
     print('loss for D: %.16f' % loss_d)
-    print('total loss: %.16f\n' % loss_n)
+    print('total loss: %.16f\n' % loss_all)
 
     DNN_tools.log_string('train epoch: %d,time: %.3f' % (i_epoch, run_time), log_out)
     DNN_tools.log_string('learning rate: %f' % tmp_lr, log_out)
-    DNN_tools.log_string('penalty for difference of predict and true : %f' % temp_penalty_nt, log_out)
-    DNN_tools.log_string('penalty weights and biases for S: %f' % penalty_wb2s, log_out)
-    DNN_tools.log_string('penalty weights and biases for I: %f' % penalty_wb2i, log_out)
-    DNN_tools.log_string('penalty weights and biases for R: %.10f' % penalty_wb2r, log_out)
-    DNN_tools.log_string('penalty weights and biases for D: %.10f' % penalty_wb2d, log_out)
+    DNN_tools.log_string('penalty weights and biases for Beta: %f' % penalty_wb2beta, log_out)
+    DNN_tools.log_string('penalty weights and biases for Gamma: %f' % penalty_wb2gamma, log_out)
+    DNN_tools.log_string('penalty weights and biases for Mu: %.10f' % penalty_wb2mu, log_out)
     DNN_tools.log_string('loss for S: %.16f' % loss_s, log_out)
     DNN_tools.log_string('loss for I: %.16f' % loss_i, log_out)
     DNN_tools.log_string('loss for R: %.16f' % loss_r, log_out)
     DNN_tools.log_string('loss for D: %.16f' % loss_d, log_out)
-    DNN_tools.log_string('total loss: %.16f \n\n' % loss_n, log_out)
+    DNN_tools.log_string('total loss: %.16f \n\n' % loss_all, log_out)
 
 
 # Reference paper: A flexible rolling regression framework for the identification of time-varying SIRD models
@@ -316,52 +312,31 @@ def solve_SIRD2COVID(R):
             loss_all.append(loss)
 
             if i_epoch % 1000 == 0:
-                # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, beta, gamma 的训练结果
-                print_and_log2train(i_epoch, time.time() - t0, tmp_lr, temp_penalty_pt, pwb2s, pwb2i, pwb2r, loss_s,
-                                    loss_i, loss_r, loss_d, loss_n, loss, log_out=log_fileout)
+                # 以下代码为输出训练过程中 beta, gamma, mu 的训练结果
+                print_and_log2train(i_epoch, time.time() - t0, tmp_lr, pwb2beta, pwb2gamma, pwb2mu, loss_s,
+                                    loss_i, loss_r, loss_d, loss, log_out=log_fileout)
 
-                s_nn2train, i_nn2train, r_nn2train, d_nn2train = sess.run(
-                    [S_NN, I_NN, R_NN, D_NN], feed_dict={T_it: np.reshape(train_date, [-1, 1])})
+                # 以下代码为输出训练过程中 beta, gamma 的测试结果
+                test_epoch.append(i_epoch / 1000)
+                test_beta, test_gamma, test_mu = sess.run([betaNN2test, gammaNN2test, muNN2test],
+                                                          feed_dict={T_test: test_t_bach})
+                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch), log2testParas)
+                DNN_tools.log_string('The test result for beta:\n%s\n' % str(np.transpose(test_beta)), log2testParas)
+                DNN_tools.log_string('The test result for gamma:\n%s\n' % str(np.transpose(test_gamma)), log2testParas)
+                DNN_tools.log_string('The test result for mu:\n%s\n' % str(np.transpose(test_mu)), log2testParas)
 
                 # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, beta, gamma 的测试结果
-                test_epoch.append(i_epoch / 1000)
-                s_nn2test, i_nn2test, r_nn2test, d_nn2test, beta_test, gamma_test = sess.run(
-                    [S_NN, I_NN, R_NN, D_NN, beta, gamma], feed_dict={T_it: test_t_bach})
-
-                DNN_tools.print_and_log_test_one_epoch(test_mse2I, test_rel2I, log_out=log_fileout)
-                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
-                                     log2testSolus)
-                DNN_tools.log_string('The test result for s:\n%s\n' % str(np.transpose(s_nn2test)), log2testSolus)
-                DNN_tools.log_string('The test result for i:\n%s\n' % str(np.transpose(i_nn2test)), log2testSolus)
-                DNN_tools.log_string('The test result for r:\n%s\n\n' % str(np.transpose(r_nn2test)), log2testSolus)
-                DNN_tools.log_string('The test result for d:\n%s\n\n' % str(np.transpose(d_nn2test)), log2testSolus)
-
-                # --------以下代码为输出训练过程中 S_NN_temp, I_NN_temp, R_NN_temp, in_beta, in_gamma 的测试结果-------------
-                s_nn_temp2test, i_nn_temp2test, r_nn_temp2test, d_nn_temp2test, in_beta_test, in_gamma_test = sess.run(
-                    [SNN_temp, INN_temp, RNN_temp, DNN_temp, in_beta, in_gamma],
-                    feed_dict={T_it: test_t_bach})
-
-                DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
-                                     log2testSolus2)
-                DNN_tools.log_string('The test result for s_temp:\n%s\n' % str(np.transpose(s_nn_temp2test)),
-                                     log2testSolus2)
-                DNN_tools.log_string('The test result for i_temp:\n%s\n' % str(np.transpose(i_nn_temp2test)),
-                                     log2testSolus2)
-                DNN_tools.log_string('The test result for r_temp:\n%s\n\n' % str(np.transpose(r_nn_temp2test)),
-                                     log2testSolus2)
-                DNN_tools.log_string('The test result for d_temp:\n%s\n\n' % str(np.transpose(d_nn_temp2test)),
-                                     log2testSolus2)
+                in_test_beta, in_test_gamma, in_test_mu = sess.run([in_beta_test, in_gamma_test, in_mu2test],
+                                                                   feed_dict={T_test: test_t_bach})
 
                 DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
                                      log2testParas)
-                DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_beta_test)),
+                DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_test_beta)),
                                      log2testParas)
-                DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_gamma_test)),
+                DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_test_gamma)),
                                      log2testParas)
-
-        DNN_tools.log_string('The train result for S:\n%s\n' % str(np.transpose(s_nn2train)), log2trianSolus)
-        DNN_tools.log_string('The train result for I:\n%s\n' % str(np.transpose(i_nn2train)), log2trianSolus)
-        DNN_tools.log_string('The train result for R:\n%s\n\n' % str(np.transpose(r_nn2train)), log2trianSolus)
+                DNN_tools.log_string('The test result for in_mu:\n%s\n' % str(np.transpose(in_test_mu)),
+                                     log2testParas)
 
         saveData.true_value2convid(train_data2i, name2Array='itrue2train', outPath=R['FolderName'])
         saveData.save_Solu2mat_Covid(s_nn2train, name2solus='s2train', outPath=R['FolderName'])
