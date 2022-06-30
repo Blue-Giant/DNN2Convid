@@ -192,31 +192,21 @@ def solve_SIRD2COVID(R):
                                                       activate_name=act_func2paras, sFourier=1.0)
 
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
-            # 在归一化条件下: 如果总的“人口”和归一化"人口"的数值一致，这样的话，归一化后的数值会很小
-            if (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
-                beta2train = tf.square(in_beta2train)
-                gamma2train = tf.nn.sigmoid(in_gamma2train)
-                mu2train = tf.nn.sigmoid(in_mu2train)
+            betaNN2train = tf.square(in_beta2train)
+            gammaNN2train = tf.nn.sigmoid(in_gamma2train)
+            muNN2train = tf.nn.sigmoid(in_mu2train)
 
-                beta2test = tf.square(in_beta2test)
-                gamma2test = tf.nn.sigmoid(in_gamma2test)
-                mu2test = tf.nn.sigmoid(in_mu2test)
-            else:
-                beta2train = tf.square(in_beta2train)
-                gamma2train = tf.nn.sigmoid(in_gamma2train)
-                mu2train = tf.nn.sigmoid(in_mu2train)
-
-                beta2test = tf.square(in_beta2test)
-                gamma2test = tf.nn.sigmoid(in_gamma2test)
-                mu2test = tf.nn.sigmoid(in_mu2test)
+            betaNN2test = tf.square(in_beta2test)
+            gammaNN2test = tf.nn.sigmoid(in_gamma2test)
+            muNN2test = tf.nn.sigmoid(in_mu2test)
 
             dS2dt = tf.matmul(Amat[0:-1, :], S_observe)
             dI2dt = tf.matmul(Amat[0:-1, :], I_observe)
             dR2dt = tf.matmul(Amat[0:-1, :], R_observe)
             dD2dt = tf.matmul(Amat[0:-1, :], D_observe)
 
-            temp_s2t = -beta[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0]
-            temp_i2t = beta[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0] - gamma[0:-1, 0] * I_observe[0:-1, 0]
+            temp_s2t = -betaNN2train[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0]
+            temp_i2t = betaNN2train[0:-1, 0] * S_observe[0:-1, 0] * I_observe[0:-1, 0] - gamma[0:-1, 0] * I_observe[0:-1, 0]
             temp_r2t = gamma[0:-1, 0] * I_observe[0:-1, 0]
             temp_d2t = gamma[0:-1, 0] * I_observe[0:-1, 0]
 
@@ -254,9 +244,8 @@ def solve_SIRD2COVID(R):
             train_Losses = my_optimizer.minimize(Loss, global_step=global_steps)
 
     t0 = time.time()
-    loss_s_all, loss_i_all, loss_r_all, loss_d_all, loss_n_all, loss_all = [], [], [], [], [], []
+    loss_s_all, loss_i_all, loss_r_all, loss_d_all, loss_all = [], [], [], [], []
     test_epoch = []
-    test_mse2I_all, test_rel2I_all = [], []
 
     # filename = 'data2csv/Wuhan.csv'
     # filename = 'data2csv/Italia_data.csv'
@@ -311,41 +300,16 @@ def solve_SIRD2COVID(R):
             t_batch, i_obs = \
                 DNN_data.randSample_Normalize_existData(train_date, train_data2i, batchsize=batchSize_train,
                                                         normalFactor=1.0, sampling_opt=R['opt2sample'])
-            n_obs = nbatch2train.reshape(batchSize_train, 1)
             tmp_lr = tmp_lr * (1 - lr_decay)
-            if R['activate_stage_penalty'] == 1:
-                if i_epoch < int(R['max_epoch'] / 10):
-                    temp_penalty_pt = pt_penalty_init
-                elif i_epoch < int(R['max_epoch'] / 5):
-                    temp_penalty_pt = 10 * pt_penalty_init
-                elif i_epoch < int(R['max_epoch'] / 4):
-                    temp_penalty_pt = 50 * pt_penalty_init
-                elif i_epoch < int(R['max_epoch'] / 2):
-                    temp_penalty_pt = 100 * pt_penalty_init
-                elif i_epoch < int(3 * R['max_epoch'] / 4):
-                    temp_penalty_pt = 200 * pt_penalty_init
-                else:
-                    temp_penalty_pt = 500 * pt_penalty_init
-            elif R['activate_stage_penalty'] == 2:
-                if i_epoch < int(R['max_epoch'] / 3):
-                    temp_penalty_pt = pt_penalty_init
-                elif i_epoch < 2 * int(R['max_epoch'] / 3):
-                    temp_penalty_pt = 10 * pt_penalty_init
-                else:
-                    temp_penalty_pt = 50 * pt_penalty_init
-            else:
-                temp_penalty_pt = pt_penalty_init
 
-            _, loss_s, loss_i, loss_r, loss_d, loss_n, loss, pwb2s, pwb2i, pwb2r, pwb2d = sess.run(
-                [train_Losses, Loss2S, Loss2I, Loss2R, Loss2D, Loss2N, Loss, PWB2S, PWB2I, PWB2R, PWB2D],
-                feed_dict={T_it: t_batch, I_observe: i_obs, N_observe: n_obs, in_learning_rate: tmp_lr,
-                           predict_true_penalty: temp_penalty_pt})
+            _, loss_s, loss_i, loss_r, loss_d, loss, pwb2beta, pwb2gamma, pwb2mu = sess.run(
+                [train_Losses, Loss2dS, Loss2dI, Loss2dR, Loss2dD, Loss, PWB2Beta, PWB2Gamma, PWB2Mu],
+                feed_dict={T_train: t_batch, I_observe: i_obs, in_learning_rate: tmp_lr})
 
             loss_s_all.append(loss_s)
             loss_i_all.append(loss_i)
             loss_r_all.append(loss_r)
             loss_d_all.append(loss_d)
-            loss_n_all.append(loss_n)
             loss_all.append(loss)
 
             if i_epoch % 1000 == 0:
@@ -360,11 +324,6 @@ def solve_SIRD2COVID(R):
                 test_epoch.append(i_epoch / 1000)
                 s_nn2test, i_nn2test, r_nn2test, d_nn2test, beta_test, gamma_test = sess.run(
                     [S_NN, I_NN, R_NN, D_NN, beta, gamma], feed_dict={T_it: test_t_bach})
-                point_ERR2I = np.square(i_nn2test - i_obs_test)
-                test_mse2I = np.mean(point_ERR2I)
-                test_mse2I_all.append(test_mse2I)
-                test_rel2I = test_mse2I / np.mean(np.square(i_obs_test))
-                test_rel2I_all.append(test_rel2I)
 
                 DNN_tools.print_and_log_test_one_epoch(test_mse2I, test_rel2I, log_out=log_fileout)
                 DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
