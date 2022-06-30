@@ -275,7 +275,6 @@ def solve_SIR2COVID(R):
             loss_r_all.append(loss_r)
 
             if i_epoch % 1000 == 0:
-                # 以下代码为输出训练过程中 beta, gamma 的训练结果
                 print_and_log2train(i_epoch, time.time() - t0, tmp_lr, loss, log_out=log_fileout)
 
                 # 以下代码为输出训练过程中 beta, gamma 的测试结果
