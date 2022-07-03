@@ -214,7 +214,7 @@ def solve_SIRD2COVID(R):
                                               activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
                 in_mu = DNN_base.DNN_scale(T_it, Weight2mu, Bias2mu, hidden_para, freq2paras,
                                            activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
-            elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
+            elif str.upper(R['model2paras']) == 'DNN_FOURIERBASE':
                 in_beta = DNN_base.DNN_FourierBase(T_it, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                    activate_name=act_func2paras, sFourier=1.0)
                 in_gamma = DNN_base.DNN_FourierBase(T_it, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
