@@ -414,18 +414,6 @@ if __name__ == "__main__":
     # R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
     R['opt2sample'] = 'windows_rand_sample'  # 训练集的选取方式--随机窗口采样(以随机点为基准，然后滑动窗口采样)
 
-    R['init_penalty2predict_true'] = 50     # Regularization parameter for boundary conditions
-    R['activate_stage_penalty'] = 1         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
-    if R['activate_stage_penalty'] == 1 or R['activate_stage_penalty'] == 2:
-        # R['init_penalty2predict_true'] = 1000
-        # R['init_penalty2predict_true'] = 100
-        # R['init_penalty2predict_true'] = 50
-        # R['init_penalty2predict_true'] = 20
-        R['init_penalty2predict_true'] = 1
-
-    # R['regular_weight_model'] = 'L0'
-    # R['regular_weight'] = 0.000             # Regularization parameter for weights
-
     # R['regular_weight_model'] = 'L1'
     R['regular_weight_model'] = 'L2'          # The model of regular weights and biases
     # R['regular_weight'] = 0.001             # Regularization parameter for weights
