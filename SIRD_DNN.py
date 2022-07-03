@@ -136,7 +136,7 @@ def solve_SIRD2COVID(R):
     flag2D = 'WB2D'
     flag2beta = 'WB2beta'
     flag2gamma = 'WB2gamma'
-    flag2mu = 'WB2gamma'
+    flag2mu = 'WB2mu'
     hidden_sird = R['hidden2SIRD']
     hidden_para = R['hidden2para']
 

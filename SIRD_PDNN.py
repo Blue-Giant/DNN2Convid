@@ -114,7 +114,7 @@ def solve_SIRD2COVID(R):
 
     flag2beta = 'WB2beta'
     flag2gamma = 'WB2gamma'
-    flag2mu = 'WB2gamma'
+    flag2mu = 'WB2mu'
     hidden_para = R['hidden2para']
 
     AI = tf.eye(batchSize_train, dtype=tf.float32) * 2
@@ -147,43 +147,49 @@ def solve_SIRD2COVID(R):
             freq2paras = R['freq2paras']
             if 'DNN' == str.upper(R['model2paras']):
                 in_beta2train = DNN_base.DNN(T_train, Weight2beta, Bias2beta, hidden_para,
-                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                             activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_gamma2train = DNN_base.DNN(T_train, Weight2gamma, Bias2gamma, hidden_para,
-                                              activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                              activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_mu2train = DNN_base.DNN(T_train, Weight2mu, Bias2mu, hidden_para,
-                                           activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                           activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_beta2test = DNN_base.DNN(T_test, Weight2beta, Bias2beta, hidden_para,
-                                            activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                            activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_gamma2test = DNN_base.DNN(T_test, Weight2gamma, Bias2gamma, hidden_para,
-                                             activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                             activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_mu2test = DNN_base.DNN(T_test, Weight2mu, Bias2mu, hidden_para,
-                                          activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                          activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
             elif 'DNN_SCALE' == str.upper(R['model2paras']):
                 in_beta2train = DNN_base.DNN_scale(T_train, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                                   activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                                   activateIn_name=R['actIn_Name2paras'],
+                                                   activate_name=R['act_Name2paras'])
                 in_gamma2train = DNN_base.DNN_scale(T_train, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                                    activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                                    activateIn_name=R['actIn_Name2paras'],
+                                                    activate_name=R['act_Name2paras'])
                 in_mu2train = DNN_base.DNN_scale(T_train, Weight2mu, Bias2mu, hidden_para, freq2paras,
-                                                 activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                                 activateIn_name=R['actIn_Name2paras'],
+                                                 activate_name=R['act_Name2paras'])
                 in_beta2test = DNN_base.DNN_scale(T_test, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                                  activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                                  activateIn_name=R['actIn_Name2paras'],
+                                                  activate_name=R['act_Name2paras'])
                 in_gamma2test = DNN_base.DNN_scale(T_test, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                                   activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                                   activateIn_name=R['actIn_Name2paras'],
+                                                   activate_name=R['act_Name2paras'])
                 in_mu2test = DNN_base.DNN_scale(T_test, Weight2mu, Bias2mu, hidden_para, freq2paras,
-                                                activateIn_name=R['actIn_Name2paras'], activate_name=act_func2paras)
+                                                activateIn_name=R['actIn_Name2paras'],
+                                                activate_name=R['act_Name2paras'])
             elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
                 in_beta2train = DNN_base.DNN_FourierBase(T_train, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                                         activate_name=act_func2paras, sFourier=1.0)
+                                                         activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_gamma2train = DNN_base.DNN_FourierBase(T_train, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                                          activate_name=act_func2paras, sFourier=1.0)
+                                                          activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_mu2train = DNN_base.DNN_FourierBase(T_train, Weight2mu, Bias2mu, hidden_para, freq2paras,
-                                                       activate_name=act_func2paras, sFourier=1.0)
+                                                       activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_beta2test = DNN_base.DNN_FourierBase(T_test, Weight2beta, Bias2beta, hidden_para, freq2paras,
-                                                        activate_name=act_func2paras, sFourier=1.0)
+                                                        activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_gamma2test = DNN_base.DNN_FourierBase(T_test, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
-                                                         activate_name=act_func2paras, sFourier=1.0)
+                                                         activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_mu2test = DNN_base.DNN_FourierBase(T_test, Weight2mu, Bias2mu, hidden_para, freq2paras,
-                                                      activate_name=act_func2paras, sFourier=1.0)
+                                                      activate_name=R['act_Name2paras'], sFourier=1.0)
 
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
             betaNN2train = tf.square(in_beta2train)
@@ -244,8 +250,8 @@ def solve_SIRD2COVID(R):
 
     # filename = 'data2csv/Wuhan.csv'
     # filename = 'data2csv/Italia_data.csv'
-    filename = 'data2csv/Korea_data.csv'
-    # filename = 'data2csv/minnesota.csv'
+    # filename = 'data2csv/Korea_data.csv'
+    filename = 'data2csv/minnesota.csv'
     date, data2I, data2S = DNN_data.load_2csvData_cal_S(datafile=filename, total_population=R['total_population'])
 
     assert (trainSet_szie + batchSize_test <= len(data2I))
@@ -330,7 +336,7 @@ def solve_SIRD2COVID(R):
                 DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_test_gamma)), log2testParas)
                 DNN_tools.log_string('The test result for in_mu:\n%s\n' % str(np.transpose(in_test_mu)), log2testParas)
 
-        saveData.save_SIRD_trainLoss2mat(loss_s_all, loss_i_all, loss_r_all, loss_d_all, actName=act_func2SIRD,
+        saveData.save_SIRD_trainLoss2mat(loss_s_all, loss_i_all, loss_r_all, loss_d_all, actName=act_func2paras,
                                          outPath=R['FolderName'])
 
         plotData.plotTrain_loss_1act_func(loss_s_all, lossType='loss2s', seedNo=R['seed'], outPath=R['FolderName'],
