@@ -51,9 +51,6 @@ def dictionary_out2file(R_dic, log_fileout):
     else:
         DNN_tools.log_string('no activate the stop_step and given_step = default: %s\n' % str(R_dic['max_epoch']), log_fileout)
 
-    DNN_tools.log_string(
-        'Initial penalty for difference of predict and true: %s\n' % str(R_dic['init_penalty2predict_true']), log_fileout)
-
     DNN_tools.log_string('The model of regular weights and biases: %s\n' % str(R_dic['regular_weight_model']), log_fileout)
 
     DNN_tools.log_string('Regularization parameter for weights and biases: %s\n' % str(R_dic['regular_weight']), log_fileout)
@@ -177,7 +174,7 @@ def solve_SIRD2COVID(R):
                 in_mu2test = DNN_base.DNN_scale(T_test, Weight2mu, Bias2mu, hidden_para, freq2paras,
                                                 activateIn_name=R['actIn_Name2paras'],
                                                 activate_name=R['act_Name2paras'])
-            elif str.upper(R['model2SIR']) == 'DNN_FOURIERBASE':
+            elif str.upper(R['model2paras']) == 'DNN_FOURIERBASE':
                 in_beta2train = DNN_base.DNN_FourierBase(T_train, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                          activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_gamma2train = DNN_base.DNN_FourierBase(T_train, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
