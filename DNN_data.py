@@ -120,6 +120,30 @@ def load_5csvData(datafile=None):
     return csvdate, csvdata1, csvdata2, csvdata3, csvdata4
 
 
+def load_4csvData_cal_S(datafile=None, total_population=3450000):
+    csvdata2I_list = []
+    csvdata2R_list = []
+    csvdata2D_list = []
+    csvdata2S_list = []
+    csvdate_list = []
+    icount = 1
+    csvreader = csv.reader(open(datafile, 'r'))
+    for dataItem2csv in csvreader:
+        if str.isnumeric(dataItem2csv[1]):
+            csvdata2I_list.append(int(dataItem2csv[1]))
+            csvdata2R_list.append(int(dataItem2csv[2]))
+            csvdata2D_list.append(int(dataItem2csv[3]))
+            csvdata2S_list.append(total_population-int(dataItem2csv[1])-int(dataItem2csv[2])-int(dataItem2csv[3]))
+            csvdate_list.append(icount)
+            icount = icount + 1
+    csvdate = np.array(csvdate_list)
+    csvdata2I = np.array(csvdata2I_list)
+    csvdata2R = np.array(csvdata2R_list)
+    csvdata2D = np.array(csvdata2D_list)
+    csvdata2S = np.array(csvdata2S_list)
+    return csvdate, csvdata2S, csvdata2I, csvdata2R, csvdata2D
+
+
 # 将数据集拆分为训练集合测试集
 def split_2csvData2train_test(date_data, data, size2train=50, normalFactor=10000):
 
@@ -260,6 +284,43 @@ def randSample_Normalize_3existData(date_data, data1, data2, batchsize=1, normal
     data1_samples = data1_samples.reshape(batchsize, 1)
     data2_samples = data2_samples.reshape(batchsize, 1)
     return date_samples, data1_samples, data2_samples
+
+
+# 从总体数据集中载入部分数据作为训练集
+def randSample_Normalize_5existData(date_data, data1, data2, data3, data4, batchsize=1, normalFactor=1000, sampling_opt=None):
+    date_temp = []
+    data1_temp = []
+    data2_temp = []
+    data3_temp = []
+    data4_temp = []
+    data_length = len(date_data)
+    if str.lower(sampling_opt) == 'random_sample':
+        indexes = np.random.randint(data_length, size=batchsize)
+    elif str.lower(sampling_opt) == 'rand_sample_sort':
+        indexes_temp = np.random.randint(data_length, size=batchsize)
+        indexes = np.sort(indexes_temp)
+    else:
+        index_base = np.random.randint(data_length-batchsize, size=1)
+        indexes = np.arange(index_base, index_base+batchsize)
+    for i_index in indexes:
+        date_temp .append(float(date_data[i_index]))
+        data1_temp.append(float(data1[i_index]) / float(normalFactor))
+        data2_temp.append(float(data2[i_index])/float(normalFactor))
+        data3_temp.append(float(data3[i_index]) / float(normalFactor))
+        data4_temp.append(float(data4[i_index]) / float(normalFactor))
+
+    date_samples = np.array(date_temp)
+    data1_samples = np.array(data1_temp)
+    data2_samples = np.array(data2_temp)
+    data3_samples = np.array(data2_temp)
+    data4_samples = np.array(data2_temp)
+
+    date_samples = date_samples.reshape(batchsize, 1)
+    data1_samples = data1_samples.reshape(batchsize, 1)
+    data2_samples = data2_samples.reshape(batchsize, 1)
+    data3_samples = data3_samples.reshape(batchsize, 1)
+    data4_samples = data4_samples.reshape(batchsize, 1)
+    return date_samples, data1_samples, data2_samples, data3_samples, data4_samples
 
 
 # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证

@@ -110,9 +110,9 @@ def plotTrain_losses(loss2act1, loss2act2, loss2act3, lossType=None, actName1=No
     if 'loss_it' == lossType:
         plt.figure()
         ax = plt.gca()
-        plt.plot(loss2act1, 'b-.', label='actName1')
-        plt.plot(loss2act2, 'r:', label='actName2')
-        plt.plot(loss2act3, 'c-*', label='actName3')
+        plt.plot(loss2act1, 'b-.', label=str(actName1))
+        plt.plot(loss2act2, 'r:', label=str(actName2))
+        plt.plot(loss2act3, 'c-*', label=str(actName3))
         plt.xlabel('epoch', fontsize=14)
         plt.ylabel('loss_it', fontsize=14)
         plt.legend(fontsize=13)
@@ -166,13 +166,6 @@ def plotTrain_MSE_REL_1act_func(data2mse, data2rel, actName=None, seedNo=1000, o
     plt.xlabel('epoch', fontsize=18)
     plt.ylabel('error', fontsize=18)
     plt.legend(fontsize=18)
-    # # plt.title('training error', fontsize=15)
-    # if actName == 'sReLU':
-    #     fntmp = '%s/%strainErr_%s' % (outPath, seedNo, 'sReLU')
-    # elif actName == 's2ReLU':
-    #     fntmp = '%s/%strainErr_%s' % (outPath, seedNo, 's2ReLU')
-    # elif actName == 'ReLU':
-    #     fntmp = '%s/%strainErr_%s' % (outPath, seedNo, 'ReLU')
     fntmp = '%s/%strainErr_%s' % (outPath, seedNo, actName)
     DNN_tools.mySaveFig(plt, fntmp, ax=ax, isax=1, iseps=0)
 
@@ -312,8 +305,8 @@ def plotTest_MSE_REL(data2mse, data2rel, epoches, actName=None, seedNo=1000, out
     DNN_tools.mySaveFig(plt, fntmp, ax=ax, isax=1, iseps=0)
 
 
-def plot_Test_MSE_REL_2ActFuncs(data_mse1,  data_mse2, data_rel1, data_rel2, epoches=None, actName1=None, actName2=None,
-                                seedNo=1000, outPath=None, xaxis_scale=False, yaxis_scale=False):
+def plot_Test_MSE_REL_2Types(data_mse1,  data_mse2, data_rel1, data_rel2, epoches=None, actName1=None, actName2=None,
+                             seedNo=1000, outPath=None, xaxis_scale=False, yaxis_scale=False):
     # fig2mse_test = plt.figure(figsize=(10, 8), dpi=98)
     fig2mse_test = plt.figure(figsize=(9, 6.5), dpi=98)
     ax = plt.gca()
@@ -595,16 +588,6 @@ def plot_Hot_solution2test(solu2test, size_vec2mat=20, actName=None, seedNo=1000
     plt.colorbar(shrink=0.9)
     plt.xticks(())
     plt.yticks(())
-    # # plt.title('exact solution', fontsize=14)
-    # if actName == 'Utrue':
-    #     fntmp = '%s/%s%s' % (outPath, seedNo, 'Utrue2test')
-    # elif actName == 'sReLU':
-    #     fntmp = '%s/%s_%s' % (outPath, seedNo, 'UsReLU2test')
-    # elif actName == 's2ReLU':
-    #     fntmp = '%s/%s_%s' % (outPath, seedNo, 'Us2ReLU2test')
-    # elif actName == 'ReLU':
-    #     fntmp = '%s/%s_%s' % (outPath, seedNo, 'UReLU2test')
-
     if str.lower(actName) == 'utrue':
         fntmp = '%s/%s%s' % (outPath, seedNo, 'Utrue2test')
     else:
@@ -673,19 +656,11 @@ def plot_Hot_point_wise_err(point_wise_err, size_vec2mat=20, actName=None, seedN
     plt.colorbar(shrink=0.85)
     plt.xticks(())
     plt.yticks(())
-    # # plt.title('point-wise error', fontsize=14)
-    # if actName == 'sReLU':
-    #     fntmp = '%s/%spErr_%s' % (outPath, seedNo, 'sReLU')
-    # elif actName == 's2ReLU':
-    #     fntmp = '%s/%spErr_%s' % (outPath, seedNo, 's2ReLU')
-    # elif actName == 'ReLU':
-    #     fntmp = '%s/%spErr_%s' % (outPath, seedNo, 'ReLU')
-
     fntmp = '%s/%spErr_%s' % (outPath, seedNo, actName)
     DNN_tools.mySaveFig(plt, fntmp, ax=ax, isax=1, iseps=0)
 
 
-def plot_testSolu2convid(solu_arr, name2solu=None, coord_points2test=None, seedNo=1000, outPath=None, xaxis_scale=False,
+def plot_Solu2convid(solu_arr, name2solu=None, coord_points2test=None, seedNo=1000, outPath=None, xaxis_scale=False,
                          yaxis_scale=False):
     plt.figure(figsize=(10, 8))
     ax = plt.gca()
@@ -702,8 +677,8 @@ def plot_testSolu2convid(solu_arr, name2solu=None, coord_points2test=None, seedN
     DNN_tools.mySaveFig(plt, fntmp, ax=ax, isax=1, iseps=0)
 
 
-def plot_testSolus2convid(solu1_arr, solu2_arr, name2solu1=None, name2solu2=None,
-                          coord_points2test=None, seedNo=1000, outPath=None, xaxis_scale=False, yaxis_scale=False):
+def plot_Solus2convid(solu1_arr, solu2_arr, name2file=None, name2solu1=None, name2solu2=None,
+                      coord_points2test=None, seedNo=1000, outPath=None, xaxis_scale=False, yaxis_scale=False):
     plt.figure(figsize=(10, 8))
     ax = plt.gca()
     plt.plot(coord_points2test, solu1_arr, 'r-.', label=str(name2solu1))
@@ -715,11 +690,11 @@ def plot_testSolus2convid(solu1_arr, solu2_arr, name2solu1=None, name2solu2=None
         ax.set_yscale('log')
     plt.legend(fontsize=18)
     plt.title('solutions ', fontsize=15)
-    fntmp = '%s/%stestSolus' % (outPath, seedNo)
+    fntmp = '%s/%s' % (outPath, str(name2file))
     DNN_tools.mySaveFig(plt, fntmp, ax=ax, isax=1, iseps=0)
 
 
-def plot_testPara2convid(para_arr, name2para=None, coord_points2test=None, seedNo=1000, outPath=None, xaxis_scale=False,
+def plot_Para2convid(para_arr, name2para=None, coord_points2test=None, seedNo=1000, outPath=None, xaxis_scale=False,
                          yaxis_scale=False):
     plt.figure(figsize=(10, 8))
     ax = plt.gca()
