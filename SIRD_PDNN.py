@@ -260,7 +260,7 @@ def solve_SIRD2COVID(R):
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie, normalFactor=1.0)
-        nbatch2train = np.ones(batchSize_train, dtype=np.float32) * float(R['total_population'])
+        # nbatch2train = np.ones(batchSize_train, dtype=np.float32) * float(R['total_population'])
 
     elif (R['total_population'] != R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用的归一化数值小于总“人口”
@@ -268,8 +268,8 @@ def solve_SIRD2COVID(R):
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie,
                                                                       normalFactor=R['normalize_population'])
-        nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (
-                    float(R['total_population']) / float(R['normalize_population']))
+        # nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (
+        #             float(R['total_population']) / float(R['normalize_population']))
 
     elif (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用总“人口”归一化数据
@@ -277,7 +277,7 @@ def solve_SIRD2COVID(R):
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie,
                                                                       normalFactor=R['total_population'])
-        nbatch2train = np.ones(batchSize_train, dtype=np.float32)
+        # nbatch2train = np.ones(batchSize_train, dtype=np.float32)
 
     # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证.
     test_t_bach = DNN_data.sample_testDays_serially(test_date, batchSize_test)
@@ -333,15 +333,27 @@ def solve_SIRD2COVID(R):
 
                 # 以下代码为输出训练过程中 beta, gamma, mu 的训练结果
                 test_epoch.append(i_epoch / 1000)
-                test_beta, test_gamma, test_mu = sess.run([betaNN2test, gammaNN2test, muNN2test],
+                beta2train, gamma2train, mu2train = sess.run([betaNN2train, gammaNN2train, muNN2train],
+                                                             feed_dict={T_train: np.reshape(train_date, [-1, 1])})
+
+                # 以下代码为输出训练过程中 beta, gamma, mu 的测试结果
+                beta2test, gamma2test, mu2test = sess.run([betaNN2test, gammaNN2test, muNN2test],
                                                           feed_dict={T_test: test_t_bach})
 
-                # 以下代码为输出训练过程中  in_beta, in_gamma, in_mu 的测试结果
-                in_test_beta, in_test_gamma, in_test_mu = sess.run([in_beta2test, in_gamma2test, in_mu2test],
-                                                                   feed_dict={T_test: test_t_bach})
+        saveData.save_trainParas2mat_Covid(beta2train, name2para='beta2train', outPath=R['FolderName'])
+        saveData.save_trainParas2mat_Covid(gamma2train, name2para='gamma2train', outPath=R['FolderName'])
+        saveData.save_trainParas2mat_Covid(mu2train, name2para='mu2train', outPath=R['FolderName'])
 
-        saveData.save_SIRD_trainLoss2mat(loss_s_all, loss_i_all, loss_r_all, loss_d_all, actName=act_func2paras,
-                                         outPath=R['FolderName'])
+        plotData.plot_Para2convid(beta2train, name2para='beta_train', coord_points2test=np.reshape(train_date, [-1, 1]),
+                                  outPath=R['FolderName'])
+        plotData.plot_Para2convid(gamma2train, name2para='gamma_train',
+                                  coord_points2test=np.reshape(train_date, [-1, 1]),
+                                  outPath=R['FolderName'])
+        plotData.plot_Para2convid(mu2train, name2para='mu_train', coord_points2test=np.reshape(train_date, [-1, 1]),
+                                  outPath=R['FolderName'])
+
+        saveData.save_SIRD_trainLoss2mat_no_N(loss_s_all, loss_i_all, loss_r_all, loss_d_all, actName=act_func2paras,
+                                              outPath=R['FolderName'])
 
         plotData.plotTrain_loss_1act_func(loss_s_all, lossType='loss2s', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
@@ -352,15 +364,15 @@ def solve_SIRD2COVID(R):
         plotData.plotTrain_loss_1act_func(loss_d_all, lossType='loss2d', seedNo=R['seed'], outPath=R['FolderName'],
                                           yaxis_scale=True)
 
-        saveData.save_SIRD_testParas2mat_Covid(test_beta, test_gamma, test_mu, name2para1='beta2test',
-                                               name2para2='gamma2test', name2para3='mu2test', outPath=R['FolderName'])
+        saveData.save_SIRD_testParas2mat(beta2test, gamma2test, mu2test, name2para1='beta2test',
+                                         name2para2='gamma2test', name2para3='mu2test', outPath=R['FolderName'])
 
-        plotData.plot_testSolu2convid(test_beta, name2solu='beta_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(test_gamma, name2solu='gamma_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
-        plotData.plot_testSolu2convid(test_mu, name2solu='mu_test', coord_points2test=test_t_bach,
-                                      outPath=R['FolderName'])
+        plotData.plot_Para2convid(beta2test, name2para='beta_test', coord_points2test=test_t_bach,
+                                  outPath=R['FolderName'])
+        plotData.plot_Para2convid(gamma2test, name2para='gamma_test', coord_points2test=test_t_bach,
+                                  outPath=R['FolderName'])
+        plotData.plot_Para2convid(mu2test, name2para='mu_test', coord_points2test=test_t_bach,
+                                  outPath=R['FolderName'])
 
 
 if __name__ == "__main__":
