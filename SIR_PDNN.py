@@ -15,7 +15,6 @@ import DNN_tools
 import DNN_data
 import plotData
 import saveData
-import DNN_LogPrint
 
 
 # 记录字典中的一些设置
@@ -220,9 +219,9 @@ def solve_SIR2COVID(R):
     filename = 'data2csv/Korea_data.csv'
     # filename = 'data2csv/minnesota.csv'
 
-    # date, data2I, data2S = DNN_data.load_2csvData_cal_S(datafile=filename, total_population=R['total_population'])
+    date, data2I, data2S = DNN_data.load_2csvData_cal_S(datafile=filename, total_population=R['total_population'])
 
-    date, data2I, data2S, data2R = DNN_data.load_2csvData_cal_S_R(datafile=filename, total_population=R['total_population'])
+    # date, data2I, data2S, data2R = DNN_data.load_2csvData_cal_S_R(datafile=filename, total_population=R['total_population'])
 
     assert(trainSet_szie + batchSize_test <= len(data2I))
     if R['normalize_population'] == 1:

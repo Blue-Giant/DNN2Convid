@@ -803,8 +803,8 @@ if __name__ == "__main__":
     R['loss_function'] = 'L2_loss'            # 损失函数的类型
     # R['loss_function'] = 'lncosh_loss'      # 损失函数的类型
 
-    R['scale_up'] = 0                         # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
-    # R['scale_up'] = 1                         # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
+    # R['scale_up'] = 0                         # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
+    R['scale_up'] = 1                         # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
     R['scale_factor'] = 100                   # scale_factor 用来对数值进行尺度提升，如1e-6量级提升到1e-2量级
 
     R['train_model'] = 'train_group'        # 训练模式:各个不同的loss捆绑打包训练

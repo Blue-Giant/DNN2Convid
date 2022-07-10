@@ -37,14 +37,16 @@ def dictionary_out2file(R_dic, log_fileout):
         DNN_tools.log_string('The scale for frequency to SIR NN: %s\n' % str(R_dic['freq2paras']), log_fileout)
         DNN_tools.log_string('Repeat the high-frequency scale or not for para-NN: %s\n' % str(R_dic['if_repeat_High_freq2paras']), log_fileout)
 
-    DNN_tools.log_string('Init learning rate: %s\n' % str(R_dic['learning_rate']), log_fileout)
-    DNN_tools.log_string('Decay to learning rate: %s\n' % str(R_dic['lr_decay']), log_fileout)
-    DNN_tools.log_string('The type for Loss function: %s\n' % str(R_dic['loss_function']), log_fileout)
+    DNN_tools.log_string('The training model for all networks: %s\n' % str(R_dic['train_model']), log_fileout)
 
     if (R_dic['optimizer_name']).title() == 'Adam':
         DNN_tools.log_string('optimizer:%s\n' % str(R_dic['optimizer_name']), log_fileout)
     else:
-        DNN_tools.log_string('optimizer:%s  with momentum=%f\n' % (R_dic['optimizer_name'], R_dic['momentum']), log_fileout)
+        DNN_tools.log_string('optimizer:%s  with momentum=%f\n' % (R_dic['optimizer_name'], R_dic['momentum']),
+                             log_fileout)
+    DNN_tools.log_string('Init learning rate: %s\n' % str(R_dic['learning_rate']), log_fileout)
+    DNN_tools.log_string('Decay to learning rate: %s\n' % str(R_dic['lr_decay']), log_fileout)
+    DNN_tools.log_string('The type for Loss function: %s\n' % str(R_dic['loss_function']), log_fileout)
 
     if R_dic['activate_stop'] != 0:
         DNN_tools.log_string('activate the stop_step and given_step= %s\n' % str(R_dic['max_epoch']), log_fileout)
@@ -94,8 +96,6 @@ def solve_SIRD2COVID(R):
         os.mkdir(log_out_path)            # 无 log_out_path 路径，创建一个 log_out_path 路径
     log_fileout = open(os.path.join(log_out_path, 'log_train.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
     dictionary_out2file(R, log_fileout)
-
-    log2testParas = open(os.path.join(log_out_path, 'test_Paras.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
     trainSet_szie = R['size2train']                   # 训练集大小,给定一个数据集，拆分训练集和测试集时，需要多大规模的训练集
     batchSize_train = R['batch_size2train']           # 训练批量的大小,该值远小于训练集大小
@@ -189,13 +189,13 @@ def solve_SIRD2COVID(R):
                                                       activate_name=R['act_Name2paras'], sFourier=1.0)
 
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
-            betaNN2train = tf.square(in_beta2train)
+            betaNN2train = tf.nn.sigmoid(in_beta2train)
             gammaNN2train = tf.nn.sigmoid(in_gamma2train)
-            muNN2train = tf.nn.sigmoid(in_mu2train)
+            muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
 
-            betaNN2test = tf.square(in_beta2test)
+            betaNN2test = tf.nn.sigmoid(in_beta2test)
             gammaNN2test = tf.nn.sigmoid(in_gamma2test)
-            muNN2test = tf.nn.sigmoid(in_mu2test)
+            muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
 
             dS2dt = tf.matmul(Amat[0:-1, :], S_observe)
             dI2dt = tf.matmul(Amat[0:-1, :], I_observe)
@@ -260,47 +260,20 @@ def solve_SIRD2COVID(R):
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie, normalFactor=1.0)
-        # nbatch2train = np.ones(batchSize_train, dtype=np.float32) * float(R['total_population'])
-
     elif (R['total_population'] != R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用的归一化数值小于总“人口”
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie,
                                                                       normalFactor=R['normalize_population'])
-        # nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (
-        #             float(R['total_population']) / float(R['normalize_population']))
-
     elif (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用总“人口”归一化数据
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie,
                                                                       normalFactor=R['total_population'])
-        # nbatch2train = np.ones(batchSize_train, dtype=np.float32)
-
     # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证.
     test_t_bach = DNN_data.sample_testDays_serially(test_date, batchSize_test)
-
-    # 由于将数据拆分为训练数据和测试数据时，进行了归一化处理，故这里不用归一化
-    s_obs_test = DNN_data.sample_testData_serially(test_data2s, batchSize_test, normalFactor=1.0)
-    i_obs_test = DNN_data.sample_testData_serially(test_data2i, batchSize_test, normalFactor=1.0)
-    r_obs_test = DNN_data.sample_testData_serially(test_data2r, batchSize_test, normalFactor=1.0)
-    d_obs_test = DNN_data.sample_testData_serially(test_data2d, batchSize_test, normalFactor=1.0)
-
-    print('The test data about s:\n', str(np.transpose(s_obs_test)))
-    print('\n')
-    print('The test data about i:\n', str(np.transpose(i_obs_test)))
-    print('\n')
-    print('The test data about r:\n', str(np.transpose(r_obs_test)))
-    print('\n')
-    print('The test data about d:\n', str(np.transpose(d_obs_test)))
-    print('\n')
-
-    DNN_tools.log_string('The test data about s:\n%s\n' % str(np.transpose(s_obs_test)), log_fileout)
-    DNN_tools.log_string('The test data about i:\n%s\n' % str(np.transpose(i_obs_test)), log_fileout)
-    DNN_tools.log_string('The test data about r:\n%s\n' % str(np.transpose(r_obs_test)), log_fileout)
-    DNN_tools.log_string('The test data about d:\n%s\n' % str(np.transpose(d_obs_test)), log_fileout)
 
     # ConfigProto 加上allow_soft_placement=True就可以使用 gpu 了
     config = tf.compat.v1.ConfigProto(allow_soft_placement=True)  # 创建sess的时候对sess进行参数配置
@@ -336,7 +309,7 @@ def solve_SIRD2COVID(R):
                 beta2train, gamma2train, mu2train = sess.run([betaNN2train, gammaNN2train, muNN2train],
                                                              feed_dict={T_train: np.reshape(train_date, [-1, 1])})
 
-                # 以下代码为输出训练过程中 beta, gamma, mu 的测试结果
+                # 以下代码为输出 beta, gamma, mu 的测试结果
                 beta2test, gamma2test, mu2test = sess.run([betaNN2test, gammaNN2test, muNN2test],
                                                           feed_dict={T_test: test_t_bach})
 
@@ -344,13 +317,12 @@ def solve_SIRD2COVID(R):
         saveData.save_trainParas2mat_Covid(gamma2train, name2para='gamma2train', outPath=R['FolderName'])
         saveData.save_trainParas2mat_Covid(mu2train, name2para='mu2train', outPath=R['FolderName'])
 
-        plotData.plot_Para2convid(beta2train, name2para='beta_train', coord_points2test=np.reshape(train_date, [-1, 1]),
-                                  outPath=R['FolderName'])
+        plotData.plot_Para2convid(beta2train, name2para='beta_train',
+                                  coord_points2test=np.reshape(train_date, [-1, 1]), outPath=R['FolderName'])
         plotData.plot_Para2convid(gamma2train, name2para='gamma_train',
-                                  coord_points2test=np.reshape(train_date, [-1, 1]),
-                                  outPath=R['FolderName'])
-        plotData.plot_Para2convid(mu2train, name2para='mu_train', coord_points2test=np.reshape(train_date, [-1, 1]),
-                                  outPath=R['FolderName'])
+                                  coord_points2test=np.reshape(train_date, [-1, 1]), outPath=R['FolderName'])
+        plotData.plot_Para2convid(mu2train, name2para='mu_train',
+                                  coord_points2test=np.reshape(train_date, [-1, 1]), outPath=R['FolderName'])
 
         saveData.save_SIRD_trainLoss2mat_no_N(loss_s_all, loss_i_all, loss_r_all, loss_d_all, actName=act_func2paras,
                                               outPath=R['FolderName'])
@@ -380,7 +352,7 @@ if __name__ == "__main__":
     R['gpuNo'] = 0  # 默认使用 GPU，这个标记就不要设为-1，设为0,1,2,3,4....n（n指GPU的数目，即电脑有多少块GPU）
 
     # 文件保存路径设置
-    store_file = 'SIRD2covid'
+    store_file = 'EulerSIRD'
     BASE_DIR = os.path.dirname(os.path.abspath(__file__))
     sys.path.append(BASE_DIR)
     OUT_DIR = os.path.join(BASE_DIR, store_file)
@@ -416,16 +388,16 @@ if __name__ == "__main__":
     R['eqs_name'] = 'SIRD'
     R['input_dim'] = 1                       # 输入维数，即问题的维数(几元问题)
     R['output_dim'] = 1                      # 输出维数
-    R['total_population'] = 9776000          # 总的“人口”数量
+    R['total_population'] = 3450000          # 总的“人口”数量
 
-    R['normalize_population'] = 9776000      # 归一化时使用的“人口”数值
+    R['normalize_population'] = 3450000      # 归一化时使用的“人口”数值
     # R['normalize_population'] = 100000
     # R['normalize_population'] = 1
 
     # ------------------------------------  神经网络的设置  ----------------------------------------
-    R['size2train'] = 70                    # 训练集的大小
-    R['batch_size2train'] = 20              # 训练数据的批大小
-    R['batch_size2test'] = 10               # 训练数据的批大小
+    R['size2train'] = 250                    # 训练集的大小
+    R['batch_size2train'] = 30              # 训练数据的批大小
+    R['batch_size2test'] = 50               # 训练数据的批大小
     # R['opt2sample'] = 'random_sample'     # 训练集的选取方式--随机采样
     # R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
     R['opt2sample'] = 'windows_rand_sample'  # 训练集的选取方式--随机窗口采样(以随机点为基准，然后滑动窗口采样)
@@ -444,7 +416,6 @@ if __name__ == "__main__":
     R['scale_up'] = 1                         # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
     R['scale_factor'] = 100                   # scale_factor 用来对数值进行尺度提升，如1e-6量级提升到1e-2量级
 
-    # R['train_model'] = 'train_group'        # 训练模式:各个不同的loss捆绑打包训练
     R['train_model'] = 'train_union_loss'     # 训练模式:各个不同的loss累加在一起，训练
 
     if 50000 < R['max_epoch']:
@@ -481,7 +452,7 @@ if __name__ == "__main__":
 
     # SIRD参数网络模型的尺度因子
     if R['model2paras'] != 'DNN':
-        R['freq2paras'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
+        R['freq2paras'] = np.concatenate(([1], np.arange(1, 25)), axis=0)
 
     # SIRD参数网络模型为傅里叶网络和尺度网络时，重复高频因子或者低频因子
     if R['model2paras'] == 'DNN_FourierBase' or R['model2paras'] == 'DNN_scale':

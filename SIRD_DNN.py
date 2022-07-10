@@ -16,6 +16,14 @@ import DNN_data
 import plotData
 import saveData
 
+# Reference paper: A flexible rolling regression framework for the identification of time-varying SIRD models
+
+
+def act_gauss(input):
+    # out = tf.exp(-0.25*tf.multiply(input, input))
+    out = tf.exp(-0.5 * tf.multiply(input, input))
+    return out
+
 
 # 记录字典中的一些设置
 def dictionary_out2file(R_dic, log_fileout):
@@ -46,14 +54,16 @@ def dictionary_out2file(R_dic, log_fileout):
         DNN_tools.log_string('The scale for frequency to SIR NN: %s\n' % str(R_dic['freq2paras']), log_fileout)
         DNN_tools.log_string('Repeat the high-frequency scale or not for para-NN: %s\n' % str(R_dic['if_repeat_High_freq2paras']), log_fileout)
 
-    DNN_tools.log_string('Init learning rate: %s\n' % str(R_dic['learning_rate']), log_fileout)
-    DNN_tools.log_string('Decay to learning rate: %s\n' % str(R_dic['lr_decay']), log_fileout)
-    DNN_tools.log_string('The type for Loss function: %s\n' % str(R_dic['loss_function']), log_fileout)
+    DNN_tools.log_string('The training model for all networks: %s\n' % str(R_dic['train_model']), log_fileout)
 
     if (R_dic['optimizer_name']).title() == 'Adam':
         DNN_tools.log_string('optimizer:%s\n' % str(R_dic['optimizer_name']), log_fileout)
     else:
         DNN_tools.log_string('optimizer:%s  with momentum=%f\n' % (R_dic['optimizer_name'], R_dic['momentum']), log_fileout)
+
+    DNN_tools.log_string('Init learning rate: %s\n' % str(R_dic['learning_rate']), log_fileout)
+    DNN_tools.log_string('Decay to learning rate: %s\n' % str(R_dic['lr_decay']), log_fileout)
+    DNN_tools.log_string('The type for Loss function: %s\n' % str(R_dic['loss_function']), log_fileout)
 
     if R_dic['activate_stop'] != 0:
         DNN_tools.log_string('activate the stop_step and given_step= %s\n' % str(R_dic['max_epoch']), log_fileout)
@@ -63,9 +73,18 @@ def dictionary_out2file(R_dic, log_fileout):
     DNN_tools.log_string(
         'Initial penalty for difference of predict and true: %s\n' % str(R_dic['init_penalty2predict_true']), log_fileout)
 
+    if R_dic['activate_stage_penalty'] == 0:
+        DNN_tools.log_string('Unchanging penalty for predict and true!!!\n', log_fileout)
+    else:
+        DNN_tools.log_string('Increasing penalty for predict and true!!!\n', log_fileout)
+
     DNN_tools.log_string('The model of regular weights and biases: %s\n' % str(R_dic['regular_weight_model']), log_fileout)
 
-    DNN_tools.log_string('Regularization parameter for weights and biases: %s\n' % str(R_dic['regular_weight']), log_fileout)
+    DNN_tools.log_string('Regularizing scale of weights and biases for ODE: %s\n' % str(R_dic['regular_weight2ODE']),
+                         log_fileout)
+
+    DNN_tools.log_string('Regularizing scale of weights and biases for Paras: %s\n' % str(R_dic['regular_weight2Paras']),
+        log_fileout)
 
     DNN_tools.log_string('Size 2 training set: %s\n' % str(R_dic['size2train']), log_fileout)
 
@@ -75,7 +94,8 @@ def dictionary_out2file(R_dic, log_fileout):
 
 
 def print_and_log2train(i_epoch, run_time, tmp_lr, temp_penalty_nt, penalty_wb2s, penalty_wb2i, penalty_wb2r,
-                        penalty_wb2d, loss_s, loss_i, loss_r, loss_d, loss2all, log_out=None):
+                        penalty_wb2d, penalty_wb2beta, penalty_wb2gamma, penalty_wb2mu, loss_s, loss_i, loss_r,
+                        loss_d, loss2all, log_out=None):
     print('train epoch: %d, time: %.3f' % (i_epoch, run_time))
     print('learning rate: %f' % tmp_lr)
     print('penalty for difference of predict and true : %f' % temp_penalty_nt)
@@ -83,6 +103,10 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, temp_penalty_nt, penalty_wb2s
     print('penalty weights and biases for I: %f' % penalty_wb2i)
     print('penalty weights and biases for R: %f' % penalty_wb2r)
     print('penalty weights and biases for D: %f' % penalty_wb2d)
+    print('penalty weights and biases for Beta: %.10f' % penalty_wb2beta)
+    print('penalty weights and biases for Gamma: %.10f' % penalty_wb2gamma)
+    print('penalty weights and biases for Mu: %.10f' % penalty_wb2mu)
+
     print('loss for S: %.16f' % loss_s)
     print('loss for I: %.16f' % loss_i)
     print('loss for R: %.16f' % loss_r)
@@ -96,6 +120,10 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, temp_penalty_nt, penalty_wb2s
     DNN_tools.log_string('penalty weights and biases for I: %f' % penalty_wb2i, log_out)
     DNN_tools.log_string('penalty weights and biases for R: %.10f' % penalty_wb2r, log_out)
     DNN_tools.log_string('penalty weights and biases for D: %.10f' % penalty_wb2d, log_out)
+    DNN_tools.log_string('penalty weights and biases for Beta: %.10f' % penalty_wb2beta, log_out)
+    DNN_tools.log_string('penalty weights and biases for Gamma: %.10f' % penalty_wb2gamma, log_out)
+    DNN_tools.log_string('penalty weights and biases for Mu: %.10f' % penalty_wb2mu, log_out)
+
     DNN_tools.log_string('loss for S: %.16f' % loss_s, log_out)
     DNN_tools.log_string('loss for I: %.16f' % loss_i, log_out)
     DNN_tools.log_string('loss for R: %.16f' % loss_r, log_out)
@@ -147,7 +175,8 @@ def solve_SIRD2COVID(R):
     batchSize_train = R['batch_size2train']           # 训练批量的大小,该值远小于训练集大小
     batchSize_test = R['batch_size2test']             # 测试批量的大小,该值小于等于测试集大小
     pt_penalty_init = R['init_penalty2predict_true']  # 预测值和真值得误差惩罚因子的初值,用于处理那些具有真实值得变量
-    wb_penalty = R['regular_weight']                  # 神经网络参数的惩罚因子
+    wb_penalty2ode = R['regular_weight2ODE']  # 神经网络参数的惩罚因子
+    wb_penalty2paras = R['regular_weight2Paras']  # 神经网络参数的惩罚因子
     lr_decay = R['lr_decay']                          # 学习率额衰减
     init_lr = R['learning_rate']                      # 初始学习率
 
@@ -195,7 +224,6 @@ def solve_SIRD2COVID(R):
             I_observe = tf.compat.v1.placeholder(tf.float32, name='I_observe', shape=[None, out_dim])
             R_observe = tf.compat.v1.placeholder(tf.float32, name='R_observe', shape=[None, out_dim])
             D_observe = tf.compat.v1.placeholder(tf.float32, name='D_observe', shape=[None, out_dim])
-            N_observe = tf.compat.v1.placeholder(tf.float32, name='N_observe', shape=[None, out_dim])
             predict_true_penalty = tf.compat.v1.placeholder_with_default(input=1e3, shape=[], name='pt_p')
             in_learning_rate = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='lr')
 
@@ -264,95 +292,98 @@ def solve_SIRD2COVID(R):
 
                 # beta = tf.square(in_beta)
                 # gamma = tf.square(in_gamma)
-                # mu = tf.square(in_mu)
+                # mu = 0.01*tf.square(in_mu)
+
+                # beta = act_gauss(in_beta)
+                # gamma = act_gauss(in_gamma)
+                # mu = 0.01*act_gauss(in_mu)
 
                 beta = tf.nn.sigmoid(in_beta)
                 gamma = tf.nn.sigmoid(in_gamma)
-                mu = tf.nn.sigmoid(in_mu)
+                mu = 0.01*tf.nn.sigmoid(in_mu)
 
-                # S_NN = SNN_temp
-                # I_NN = INN_temp
-                # R_NN = RNN_temp
-                # D_NN = DNN_temp
+                S_NN = SNN_temp
+                I_NN = 0.01*INN_temp
+                R_NN = 0.1*RNN_temp
+                D_NN = 0.005*DNN_temp
 
+                # 使用ReLU激活函数，这种策略不收敛
                 # S_NN = tf.nn.relu(SNN_temp)
-                # I_NN = tf.nn.relu(INN_temp)
-                # R_NN = tf.nn.relu(RNN_temp)
-                # D_NN = tf.nn.relu(DNN_temp)
+                # I_NN = 0.01*tf.nn.relu(INN_temp)
+                # R_NN = 0.1*tf.nn.relu(RNN_temp)
+                # D_NN = 0.005*tf.nn.relu(DNN_temp)
+
+                # S_NN = act_gauss(SNN_temp)
+                # I_NN = 0.05 * act_gauss(INN_temp)
+                # R_NN = 0.1 * act_gauss(RNN_temp)
+                # D_NN = 0.005 * act_gauss(DNN_temp)
 
                 # S_NN = tf.abs(SNN_temp)
                 # I_NN = tf.abs(INN_temp)
                 # R_NN = tf.abs(RNN_temp)
                 # D_NN = tf.abs(DNN_temp)
 
-                S_NN = tf.square(SNN_temp)
-                I_NN = tf.square(INN_temp)
-                R_NN = tf.square(RNN_temp)
-                D_NN = tf.square(DNN_temp)
-
-                # S_NN = tf.sqrt(tf.square(SNN_temp))
-                # I_NN = tf.sqrt(tf.square(INN_temp))
-                # R_NN = tf.sqrt(tf.square(RNN_temp))
-                # D_NN = tf.sqrt(tf.square(DNN_temp))
+                # S_NN = tf.square(SNN_temp)
+                # I_NN = 0.01*tf.square(INN_temp)
+                # R_NN = 0.1*tf.square(RNN_temp)
+                # D_NN = 0.01*tf.square(DNN_temp)
 
                 # S_NN = tf.nn.sigmoid(SNN_temp)
                 # I_NN = tf.nn.sigmoid(INN_temp)
                 # R_NN = tf.nn.sigmoid(RNN_temp)
                 # D_NN = tf.nn.sigmoid(DNN_temp)
             else:
-                # beta = tf.square(in_beta)
-                # gamma = tf.nn.sigmoid(in_gamma)
-                # mu = tf.nn.sigmoid(in_mu)
-
                 # beta = tf.nn.relu(in_beta)
                 # gamma = tf.nn.relu(in_gamma)
                 # mu = tf.nn.relu(in_mu)
 
                 # beta = tf.square(in_beta)
                 # gamma = tf.square(in_gamma)
-                # mu = tf.square(in_mu)
+                # mu = 0.01*tf.square(in_mu)
+
+                # beta = act_gauss(in_beta)
+                # gamma = act_gauss(in_gamma)
+                # mu = 0.01 * act_gauss(in_mu)
 
                 beta = tf.nn.sigmoid(in_beta)
                 gamma = tf.nn.sigmoid(in_gamma)
-                mu = tf.nn.sigmoid(in_mu)
+                mu = 0.01*tf.nn.sigmoid(in_mu)
 
-                # S_NN = SNN_temp
-                # I_NN = INN_temp
-                # R_NN = RNN_temp
-                # D_NN = DNN_temp
+                S_NN = SNN_temp
+                I_NN = 0.01*INN_temp
+                R_NN = 0.1*RNN_temp
+                D_NN = 0.005*DNN_temp
 
+                # 使用ReLU激活函数，这种策略不收敛
                 # S_NN = tf.nn.relu(SNN_temp)
-                # I_NN = tf.nn.relu(INN_temp)
-                # R_NN = tf.nn.relu(RNN_temp)
-                # D_NN = tf.nn.relu(DNN_temp)
+                # I_NN = 0.01*tf.nn.relu(INN_temp)
+                # R_NN = 0.1*tf.nn.relu(RNN_temp)
+                # D_NN = 0.01*tf.nn.relu(DNN_temp)
+
+                # S_NN = act_gauss(SNN_temp)
+                # I_NN = 0.05 * act_gauss(INN_temp)
+                # R_NN = 0.1 * act_gauss(RNN_temp)
+                # D_NN = 0.005 * act_gauss(DNN_temp)
 
                 # S_NN = tf.abs(SNN_temp)
                 # I_NN = tf.abs(INN_temp)
                 # R_NN = tf.abs(RNN_temp)
                 # D_NN = tf.abs(DNN_temp)
 
-                S_NN = tf.square(SNN_temp)
-                I_NN = tf.square(INN_temp)
-                R_NN = tf.square(RNN_temp)
-                D_NN = tf.square(DNN_temp)
-
-                # S_NN = tf.sqrt(tf.square(SNN_temp))
-                # I_NN = tf.sqrt(tf.square(INN_temp))
-                # R_NN = tf.sqrt(tf.square(RNN_temp))
-                # D_NN = tf.sqrt(tf.square(DNN_temp))
+                # S_NN = tf.square(SNN_temp)
+                # I_NN = 0.1*tf.square(INN_temp)
+                # R_NN = 0.1*tf.square(RNN_temp)
+                # D_NN = 0.01*tf.square(DNN_temp)
 
                 # S_NN = tf.nn.sigmoid(SNN_temp)
                 # I_NN = tf.nn.sigmoid(INN_temp)
                 # R_NN = tf.nn.sigmoid(RNN_temp)
                 # D_NN = tf.nn.sigmoid(DNN_temp)
 
-            # N_NN = S_NN + I_NN + R_NN + + D_NN
-
             dS_NN2t = tf.gradients(S_NN, T_it)[0]
             dI_NN2t = tf.gradients(I_NN, T_it)[0]
             dR_NN2t = tf.gradients(R_NN, T_it)[0]
             dD_NN2t = tf.gradients(D_NN, T_it)[0]
-            # dN_NN2t = tf.gradients(N_NN, T_it)[0]
 
             temp_snn2t = -beta*S_NN*I_NN/(S_NN + I_NN)
             temp_inn2t = beta*S_NN*I_NN - gamma * I_NN - mu * I_NN
@@ -364,12 +395,10 @@ def solve_SIRD2COVID(R):
                 LossI_Net_obs = tf.reduce_mean(tf.square(I_NN - I_observe))
                 LossR_Net_obs = tf.reduce_mean(tf.square(R_NN - R_observe))
                 LossD_Net_obs = tf.reduce_mean(tf.square(D_NN - D_observe))
-                # LossN_Net_obs = tf.reduce_mean(tf.square(N_NN - N_observe))
 
                 Loss2dS = tf.reduce_mean(tf.square(dS_NN2t - temp_snn2t))
                 Loss2dI = tf.reduce_mean(tf.square(dI_NN2t - temp_inn2t))
                 Loss2dR = tf.reduce_mean(tf.square(dR_NN2t - temp_rnn2t))
-                # Loss2dN = tf.reduce_mean(tf.square(dN_NN2t))
                 Loss2dD = tf.reduce_mean(tf.square(dD_NN2t - temp_dnn2t))
             elif str.lower(R['loss_function']) == 'l2_loss' and R['scale_up'] == 1:
                 scale_up = R['scale_factor']
@@ -377,38 +406,32 @@ def solve_SIRD2COVID(R):
                 LossI_Net_obs = tf.reduce_mean(tf.square(scale_up*I_NN - scale_up*I_observe))
                 LossR_Net_obs = tf.reduce_mean(tf.square(scale_up*R_NN - scale_up*R_observe))
                 LossD_Net_obs = tf.reduce_mean(tf.square(scale_up*D_NN - scale_up*D_observe))
-                # LossN_Net_obs = tf.reduce_mean(tf.square(scale_up*N_NN - scale_up*N_observe))
 
                 Loss2dS = tf.reduce_mean(tf.square(dS_NN2t - temp_snn2t))
                 Loss2dI = tf.reduce_mean(tf.square(dI_NN2t - temp_inn2t))
                 Loss2dR = tf.reduce_mean(tf.square(dR_NN2t - temp_rnn2t))
-                # Loss2dN = tf.reduce_mean(tf.square(dN_NN2t))
                 Loss2dD = tf.reduce_mean(tf.square(dD_NN2t - temp_dnn2t))
             elif str.lower(R['loss_function']) == 'lncosh_loss' and R['scale_up'] == 0:
                 LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(S_NN - S_observe)))
                 LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(I_NN - I_observe)))
                 LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(R_NN - R_observe)))
                 LossD_Net_obs = tf.reduce_mean(tf.log(tf.cosh(D_NN - D_observe)))
-                # LossN_Net_obs = tf.reduce_mean(tf.log(tf.cosh(N_NN - N_observe)))
 
                 Loss2dS = tf.reduce_mean(tf.log(tf.cosh(dS_NN2t - temp_snn2t)))
                 Loss2dI = tf.reduce_mean(tf.log(tf.cosh(dI_NN2t - temp_inn2t)))
                 Loss2dR = tf.reduce_mean(tf.log(tf.cosh(dR_NN2t - temp_rnn2t)))
                 Loss2dD = tf.reduce_mean(tf.log(tf.cosh(dD_NN2t - temp_dnn2t)))
-                # Loss2dN = tf.reduce_mean(tf.log(tf.cosh(dN_NN2t)))
             elif str.lower(R['loss_function']) == 'lncosh_loss' and R['scale_up'] == 1:
                 scale_up = R['scale_factor']
                 LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*S_NN - scale_up*S_observe)))
                 LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*I_NN - scale_up*I_observe)))
                 LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*R_NN - scale_up*R_observe)))
                 LossD_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*D_NN - scale_up*D_observe)))
-                # LossN_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*N_NN - scale_up*N_observe)))
 
                 Loss2dS = tf.reduce_mean(tf.log(tf.cosh(dS_NN2t - temp_snn2t)))
                 Loss2dI = tf.reduce_mean(tf.log(tf.cosh(dI_NN2t - temp_inn2t)))
                 Loss2dR = tf.reduce_mean(tf.log(tf.cosh(dR_NN2t - temp_rnn2t)))
                 Loss2dD = tf.reduce_mean(tf.log(tf.cosh(dD_NN2t - temp_dnn2t)))
-                # Loss2dN = tf.reduce_mean(tf.log(tf.cosh(dN_NN2t)))
 
             if R['regular_weight_model'] == 'L1':
                 regular_WB2S = DNN_base.regular_weights_biases_L1(Weight2S, Bias2S)
@@ -435,19 +458,18 @@ def solve_SIRD2COVID(R):
                 regular_WB2Gamma = tf.constant(0.0)
                 regular_WB2Mu = tf.constant(0.0)
 
-            PWB2S = wb_penalty*regular_WB2S
-            PWB2I = wb_penalty*regular_WB2I
-            PWB2R = wb_penalty*regular_WB2R
-            PWB2D = wb_penalty * regular_WB2D
-            PWB2Beta = wb_penalty * regular_WB2Beta
-            PWB2Gamma = wb_penalty * regular_WB2Gamma
-            PWB2Mu = wb_penalty * regular_WB2Mu
+            PWB2S = wb_penalty2ode*regular_WB2S
+            PWB2I = wb_penalty2ode*regular_WB2I
+            PWB2R = wb_penalty2ode*regular_WB2R
+            PWB2D = wb_penalty2ode * regular_WB2D
+            PWB2Beta = wb_penalty2paras * regular_WB2Beta
+            PWB2Gamma = wb_penalty2paras * regular_WB2Gamma
+            PWB2Mu = wb_penalty2paras * regular_WB2Mu
 
             Loss2S = predict_true_penalty * LossS_Net_obs + Loss2dS + PWB2S
             Loss2I = predict_true_penalty * LossI_Net_obs + Loss2dI + PWB2I
             Loss2R = predict_true_penalty * LossR_Net_obs + Loss2dR + PWB2R
             Loss2D = predict_true_penalty * LossD_Net_obs + Loss2dD + PWB2D
-            # Loss2N = LossN_Net_obs + Loss2dN
 
             Loss = Loss2S + Loss2I + Loss2R + Loss2D + PWB2Beta + PWB2Gamma + PWB2Mu
 
@@ -457,7 +479,6 @@ def solve_SIRD2COVID(R):
                 train_Loss2I = my_optimizer.minimize(Loss2I, global_step=global_steps)
                 train_Loss2R = my_optimizer.minimize(Loss2R, global_step=global_steps)
                 train_Loss2D = my_optimizer.minimize(Loss2D, global_step=global_steps)
-                # train_Loss2N = my_optimizer.minimize(Loss2N, global_step=global_steps)
                 train_Losses = tf.group(train_Loss2S, train_Loss2I, train_Loss2R, train_Loss2D)
             elif R['train_model'] == 'train_union_loss':
                 train_Losses = my_optimizer.minimize(Loss, global_step=global_steps)
@@ -467,6 +488,7 @@ def solve_SIRD2COVID(R):
     test_epoch = []
     test_mse2S_all, test_rel2S_all = [], []
     test_mse2I_all, test_rel2I_all = [], []
+
     test_mse2R_all, test_rel2R_all = [], []
     test_mse2D_all, test_rel2D_all = [], []
 
@@ -485,25 +507,18 @@ def solve_SIRD2COVID(R):
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie, normalFactor=1.0)
-        # nbatch2train = np.ones(batchSize_train, dtype=np.float32) * float(R['total_population'])
-
     elif (R['total_population'] != R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用的归一化数值小于总“人口”
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie,
                                                                       normalFactor=R['normalize_population'])
-        # nbatch2train = np.ones(batchSize_train, dtype=np.float32) * (
-        #             float(R['total_population']) / float(R['normalize_population']))
-
     elif (R['total_population'] == R['normalize_population']) and R['normalize_population'] != 1:
         # 归一化数据，使用总“人口”归一化数据
         train_date, train_data2s, train_data2i, train_data2r, train_data2d, test_date, test_data2s, test_data2i, \
         test_data2r, test_data2d = DNN_data.split_5csvData2train_test(date, data2S, data2I, data2R, data2D,
                                                                       size2train=trainSet_szie,
                                                                       normalFactor=R['total_population'])
-        # nbatch2train = np.ones(batchSize_train, dtype=np.float32)
-
     # 对于时间数据来说，验证模型的合理性，要用连续的时间数据验证.
     test_t_bach = DNN_data.sample_testDays_serially(test_date, batchSize_test)
 
@@ -553,18 +568,11 @@ def solve_SIRD2COVID(R):
                     temp_penalty_pt = 200 * pt_penalty_init
                 else:
                     temp_penalty_pt = 500 * pt_penalty_init
-            elif R['activate_stage_penalty'] == 2:
-                if i_epoch < int(R['max_epoch'] / 3):
-                    temp_penalty_pt = pt_penalty_init
-                elif i_epoch < 2 * int(R['max_epoch'] / 3):
-                    temp_penalty_pt = 10 * pt_penalty_init
-                else:
-                    temp_penalty_pt = 50 * pt_penalty_init
             else:
                 temp_penalty_pt = pt_penalty_init
 
-            _, loss_s, loss_i, loss_r, loss_d, loss, pwb2s, pwb2i, pwb2r, pwb2d = sess.run(
-                [train_Losses, Loss2S, Loss2I, Loss2R, Loss2D, Loss, PWB2S, PWB2I, PWB2R, PWB2D],
+            _, loss_s, loss_i, loss_r, loss_d, loss, pwb2s, pwb2i, pwb2r, pwb2d, pwb2beta, pwb2gamma, pwb2mu = sess.run(
+                [train_Losses, Loss2S, Loss2I, Loss2R, Loss2D, Loss, PWB2S, PWB2I, PWB2R, PWB2D, PWB2Beta, PWB2Gamma, PWB2Mu],
                 feed_dict={T_it: t_batch, S_observe: s_obs, I_observe: i_obs, R_observe: r_obs, D_observe: d_obs,
                            in_learning_rate: tmp_lr, predict_true_penalty: temp_penalty_pt})
 
@@ -572,12 +580,12 @@ def solve_SIRD2COVID(R):
             loss_i_all.append(loss_i)
             loss_r_all.append(loss_r)
             loss_d_all.append(loss_d)
-            # loss_n_all.append(loss_n)
             loss_all.append(loss)
 
             if i_epoch % 1000 == 0:
                 print_and_log2train(i_epoch, time.time() - t0, tmp_lr, temp_penalty_pt, pwb2s, pwb2i, pwb2r, pwb2d,
-                                    loss_s, loss_i, loss_r, loss_d, loss, log_out=log_fileout)
+                                    pwb2beta, pwb2gamma, pwb2mu, loss_s, loss_i, loss_r, loss_d, loss,
+                                    log_out=log_fileout)
 
                 # 以下代码为输出训练过程中 S_NN, I_NN, R_NN, D_NN, beta, gamma, mu 的训练结果
                 s_nn2train, i_nn2train, r_nn2train, d_nn2train, beta2train, gamma2train, mu2train = sess.run(
@@ -610,35 +618,6 @@ def solve_SIRD2COVID(R):
 
                 print_and_log_test_one_epoch(test_mse2S, test_rel2S, test_mse2I, test_rel2I, test_mse2R, test_rel2R,
                                              test_mse2D, test_rel2D, log_out=log_fileout)
-                # DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
-                #                      log2testSolus)
-                # DNN_tools.log_string('The test result for s:\n%s\n' % str(np.transpose(s_nn2test)), log2testSolus)
-                # DNN_tools.log_string('The test result for i:\n%s\n' % str(np.transpose(i_nn2test)), log2testSolus)
-                # DNN_tools.log_string('The test result for r:\n%s\n\n' % str(np.transpose(r_nn2test)), log2testSolus)
-                # DNN_tools.log_string('The test result for d:\n%s\n\n' % str(np.transpose(d_nn2test)), log2testSolus)
-
-                # # --------以下代码为输出训练过程中 S_NN_temp, I_NN_temp, R_NN_temp, in_beta, in_gamma 的测试结果-------------
-                # s_nn_temp2test, i_nn_temp2test, r_nn_temp2test, d_nn_temp2test, in_beta_test, in_gamma_test = sess.run(
-                #     [SNN_temp, INN_temp, RNN_temp, DNN_temp, in_beta, in_gamma],
-                #     feed_dict={T_it: test_t_bach})
-                #
-                # DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
-                #                      log2testSolus2)
-                # DNN_tools.log_string('The test result for s_temp:\n%s\n' % str(np.transpose(s_nn_temp2test)),
-                #                      log2testSolus2)
-                # DNN_tools.log_string('The test result for i_temp:\n%s\n' % str(np.transpose(i_nn_temp2test)),
-                #                      log2testSolus2)
-                # DNN_tools.log_string('The test result for r_temp:\n%s\n\n' % str(np.transpose(r_nn_temp2test)),
-                #                      log2testSolus2)
-                # DNN_tools.log_string('The test result for d_temp:\n%s\n\n' % str(np.transpose(d_nn_temp2test)),
-                #                      log2testSolus2)
-                #
-                # DNN_tools.log_string('------------------The epoch----------------------: %s\n' % str(i_epoch),
-                #                      log2testParas)
-                # DNN_tools.log_string('The test result for in_beta:\n%s\n' % str(np.transpose(in_beta_test)),
-                #                      log2testParas)
-                # DNN_tools.log_string('The test result for in_gamma:\n%s\n' % str(np.transpose(in_gamma_test)),
-                #                      log2testParas)
 
         saveData.save_trainSolu2mat_Covid(s_nn2train, name2solus='s2train', outPath=R['FolderName'])
         saveData.save_trainSolu2mat_Covid(i_nn2train, name2solus='i2train', outPath=R['FolderName'])
@@ -705,15 +684,6 @@ def solve_SIRD2COVID(R):
                                          outPath=R['FolderName'])
         saveData.save_SIRD_testParas2mat(beta2test, gamma2test, mu2test, name2para1='beta2test',
                                          name2para2='gamma2test', name2para3='mu2test', outPath=R['FolderName'])
-
-        # plotData.plot_Solu2convid(s_nn2test, name2solu='s_test', coord_points2test=test_t_bach, seedNo=R['seed'],
-        #                           outPath=R['FolderName'])
-        # plotData.plot_Solu2convid(i_nn2test, name2solu='i_test', coord_points2test=test_t_bach, seedNo=R['seed'],
-        #                           outPath=R['FolderName'])
-        # plotData.plot_Solu2convid(r_nn2test, name2solu='r_test', coord_points2test=test_t_bach, seedNo=R['seed'],
-        #                           outPath=R['FolderName'])
-        # plotData.plot_Solu2convid(d_nn2test, name2solu='d_test', coord_points2test=test_t_bach, seedNo=R['seed'],
-        #                           outPath=R['FolderName'])
 
         plotData.plot_Solus2convid(s_obs_test, s_nn2test, name2file='s2test', name2solu1='s_true', name2solu2='s_test',
                                    coord_points2test=test_t_bach, seedNo=R['seed'], outPath=R['FolderName'])
@@ -799,15 +769,16 @@ if __name__ == "__main__":
         # R['init_penalty2predict_true'] = 1
 
     # R['regular_weight_model'] = 'L0'
-    # R['regular_weight'] = 0.000             # Regularization parameter for weights
-
     # R['regular_weight_model'] = 'L1'
-    R['regular_weight_model'] = 'L2'          # The model of regular weights and biases
-    # R['regular_weight'] = 0.001             # Regularization parameter for weights
-    # R['regular_weight'] = 0.0005            # Regularization parameter for weights
-    # R['regular_weight'] = 0.0001            # Regularization parameter for weights
-    R['regular_weight'] = 0.00005             # Regularization parameter for weights
-    # R['regular_weight'] = 0.00001           # Regularization parameter for weights
+    R['regular_weight_model'] = 'L2'  # The model of regular weights and biases
+
+    # R['regular_weight2ODE'] = 0.001             # Regularization parameter for weights
+    # R['regular_weight2ODE'] = 0.0005            # Regularization parameter for weights
+    R['regular_weight2ODE'] = 0.0001  # Regularization parameter for weights
+    # R['regular_weight2ODE'] = 0.00005             # Regularization parameter for weights
+    # R['regular_weight2ODE'] = 0.00001           # Regularization parameter for weights
+
+    R['regular_weight2Paras'] = 0.0001
 
     R['optimizer_name'] = 'Adam'              # 优化器
     R['loss_function'] = 'L2_loss'            # 损失函数的类型
@@ -826,12 +797,12 @@ if __name__ == "__main__":
         # R['learning_rate'] = 2e-4           # 学习率
         # R['lr_decay'] = 5e-5                # 学习率 decay
     elif (20000 < R['max_epoch'] and 50000 >= R['max_epoch']):
-        # R['learning_rate'] = 1e-3           # 学习率
-        # R['lr_decay'] = 1e-4                # 学习率 decay
+        R['learning_rate'] = 1e-3           # 学习率
+        R['lr_decay'] = 1e-4                # 学习率 decay
         # R['learning_rate'] = 2e-4           # 学习率
         # R['lr_decay'] = 1e-4                # 学习率 decay
-        R['learning_rate'] = 1e-4             # 学习率
-        R['lr_decay'] = 5e-5                  # 学习率 decay
+        # R['learning_rate'] = 1e-4             # 学习率
+        # R['lr_decay'] = 5e-5                  # 学习率 decay
     else:
         R['learning_rate'] = 5e-5             # 学习率
         R['lr_decay'] = 1e-5                  # 学习率 decay
