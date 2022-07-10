@@ -19,6 +19,12 @@ import saveData
 # Reference paper: A flexible rolling regression framework for the identification of time-varying SIRD models
 
 
+def act_gauss(input):
+    # out = tf.exp(-0.25*tf.multiply(input, input))
+    out = tf.exp(-0.5 * tf.multiply(input, input))
+    return out
+
+
 # 记录字典中的一些设置
 def dictionary_out2file(R_dic, log_fileout):
     DNN_tools.log_string('Equation name for problem: %s\n' % (R_dic['eqs_name']), log_fileout)
@@ -142,7 +148,6 @@ def solve_SIRD2COVID(R):
 
             in_learning_rate = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='lr')
 
-            freq2paras = R['freq2paras']
             if 'DNN' == str.upper(R['model2paras']):
                 in_beta2train = DNN_base.DNN(T_train, Weight2beta, Bias2beta, hidden_para,
                                              activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
@@ -167,6 +172,7 @@ def solve_SIRD2COVID(R):
                 in_mu2test = DNN_base.DNN(T_test, Weight2mu, Bias2mu, hidden_para,
                                           activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
             elif 'DNN_SCALE' == str.upper(R['model2paras']):
+                freq2paras = R['freq2paras']
                 in_beta2train = DNN_base.DNN_scale(T_train, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                    activateIn_name=R['actIn_Name2paras'],
                                                    activate_name=R['act_Name2paras'])
@@ -196,6 +202,7 @@ def solve_SIRD2COVID(R):
                                                 activateIn_name=R['actIn_Name2paras'],
                                                 activate_name=R['act_Name2paras'])
             elif str.upper(R['model2paras']) == 'DNN_FOURIERBASE':
+                freq2paras = R['freq2paras']
                 in_beta2train = DNN_base.DNN_FourierBase(T_train, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                          activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_gamma2train = DNN_base.DNN_FourierBase(T_train, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
@@ -223,18 +230,36 @@ def solve_SIRD2COVID(R):
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
             betaNN2train = tf.nn.sigmoid(in_beta2train)
             gammaNN2train = tf.nn.sigmoid(in_gamma2train)
-            # muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
-            muNN2train = 0.05 * tf.nn.sigmoid(in_mu2train)
-
+            # # muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
+            # muNN2train = 0.05 * tf.nn.sigmoid(in_mu2train)
+            muNN2train = 0.1 * tf.nn.sigmoid(in_mu2train)
+            #
             betaNN2train_test = tf.nn.sigmoid(in_beta2train_test)
             gammaNN2train_test = tf.nn.sigmoid(in_gamma2train_test)
-            # muNN2train_test = 0.01 * tf.nn.sigmoid(in_mu2train_test)
-            muNN2train_test = 0.05 * tf.nn.sigmoid(in_mu2train_test)
-
+            # # muNN2train_test = 0.01 * tf.nn.sigmoid(in_mu2train_test)
+            # muNN2train_test = 0.05 * tf.nn.sigmoid(in_mu2train_test)
+            muNN2train_test = 0.1 * tf.nn.sigmoid(in_mu2train_test)
+            #
             betaNN2test = tf.nn.sigmoid(in_beta2test)
             gammaNN2test = tf.nn.sigmoid(in_gamma2test)
-            # muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
-            muNN2test = 0.05 * tf.nn.sigmoid(in_mu2test)
+            # # muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
+            # muNN2test = 0.05 * tf.nn.sigmoid(in_mu2test)
+            muNN2test = 0.1 * tf.nn.sigmoid(in_mu2test)
+
+            # betaNN2train = act_gauss(in_beta2train)
+            # gammaNN2train = act_gauss(in_gamma2train)
+            # # muNN2train = 0.01*act_gauss(in_mu2train)
+            # muNN2train = 0.05 * act_gauss(in_mu2train)
+            #
+            # betaNN2train_test = act_gauss(in_beta2train_test)
+            # gammaNN2train_test = act_gauss(in_gamma2train_test)
+            # # muNN2train_test = 0.01 * act_gauss(in_mu2train_test)
+            # muNN2train_test = 0.05 * act_gauss(in_mu2train_test)
+            #
+            # betaNN2test = act_gauss(in_beta2test)
+            # gammaNN2test = act_gauss(in_gamma2test)
+            # # muNN2test = 0.01*act_gauss(in_mu2test)
+            # muNN2test = 0.05 * act_gauss(in_mu2test)
 
             dS2dt = tf.matmul(Amat[0:-1, :], S_observe)
             dI2dt = tf.matmul(Amat[0:-1, :], I_observe)
@@ -319,7 +344,7 @@ def solve_SIRD2COVID(R):
     config.gpu_options.allow_growth = True                        # True是让TensorFlow在运行过程中动态申请显存，避免过多的显存占用。
     config.allow_soft_placement = True                            # 当指定的设备不存在时，允许选择一个存在的设备运行。比如gpu不存在，自动降到cpu上运行
     with tf.compat.v1.Session(config=config) as sess:
-        sess.run(tf.global_variables_initializer())
+        sess.run(tf.compat.v1.global_variables_initializer())
         tmp_lr = init_lr
         for i_epoch in range(R['max_epoch'] + 1):
             t_batch, s_obs, i_obs, r_obs, d_obs = \
@@ -502,10 +527,10 @@ if __name__ == "__main__":
     # R['actIn_Name2paras'] = 'relu'
     # R['actIn_Name2paras'] = 'leaky_relu'
     # R['actIn_Name2paras'] = 'sigmoid'
-    R['actIn_Name2paras'] = 'tanh'
+    # R['actIn_Name2paras'] = 'tanh'
     # R['actIn_Name2paras'] = 'srelu'
     # R['actIn_Name2paras'] = 's2relu'
-    # R['actIn_Name2paras'] = 'sin'
+    R['actIn_Name2paras'] = 'sin'
     # R['actIn_Name2paras'] = 'sinAddcod'
     # R['actIn_Name2paras'] = 'elu'
     # R['actIn_Name2paras'] = 'gelu'
@@ -515,10 +540,10 @@ if __name__ == "__main__":
     # R['act_Name2paras'] = 'relu'
     # R['act_Name2paras'] = 'leaky_relu'
     # R['act_Name2paras'] = 'sigmoid'
-    R['act_Name2paras'] = 'tanh'  # 这个激活函数比较s2ReLU合适
+    # R['act_Name2paras'] = 'tanh'  # 这个激活函数比较s2ReLU合适
     # R['act_Name2paras'] = 'srelu'
     # R['act_Name2paras'] = 's2relu'
-    # R['act_Name2paras'] = 'sin'
+    R['act_Name2paras'] = 'sin'
     # R['act_Name2paras'] = 'sinAddcos'
     # R['act_Name2paras'] = 'elu'
     # R['act_Name2paras'] = 'gelu'
