@@ -67,10 +67,10 @@ def dictionary_out2file(R_dic, log_fileout):
 def print_and_log2train(i_epoch, run_time, tmp_lr, penalty_wb2beta, penalty_wb2gamma, penalty_wb2mu, loss_s, loss_i,
                         loss_r, loss_d, loss_all, log_out=None):
     print('train epoch: %d, time: %.3f' % (i_epoch, run_time))
-    print('learning rate: %f' % tmp_lr)
-    print('penalty weights and biases for Beta: %f' % penalty_wb2beta)
-    print('penalty weights and biases for Gamma: %f' % penalty_wb2gamma)
-    print('penalty weights and biases for Mu: %f' % penalty_wb2mu)
+    print('learning rate: %.10f' % tmp_lr)
+    print('penalty weights and biases for Beta: %.16f' % penalty_wb2beta)
+    print('penalty weights and biases for Gamma: %.16f' % penalty_wb2gamma)
+    print('penalty weights and biases for Mu: %.16f' % penalty_wb2mu)
     print('loss for S: %.16f' % loss_s)
     print('loss for I: %.16f' % loss_i)
     print('loss for R: %.16f' % loss_r)
@@ -78,10 +78,10 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, penalty_wb2beta, penalty_wb2g
     print('total loss: %.16f\n' % loss_all)
 
     DNN_tools.log_string('train epoch: %d,time: %.3f' % (i_epoch, run_time), log_out)
-    DNN_tools.log_string('learning rate: %f' % tmp_lr, log_out)
-    DNN_tools.log_string('penalty weights and biases for Beta: %f' % penalty_wb2beta, log_out)
-    DNN_tools.log_string('penalty weights and biases for Gamma: %f' % penalty_wb2gamma, log_out)
-    DNN_tools.log_string('penalty weights and biases for Mu: %.10f' % penalty_wb2mu, log_out)
+    DNN_tools.log_string('learning rate: %.10f' % tmp_lr, log_out)
+    DNN_tools.log_string('penalty weights and biases for Beta: %.16f' % penalty_wb2beta, log_out)
+    DNN_tools.log_string('penalty weights and biases for Gamma: %.16f' % penalty_wb2gamma, log_out)
+    DNN_tools.log_string('penalty weights and biases for Mu: %.16f' % penalty_wb2mu, log_out)
     DNN_tools.log_string('loss for S: %.16f' % loss_s, log_out)
     DNN_tools.log_string('loss for I: %.16f' % loss_i, log_out)
     DNN_tools.log_string('loss for R: %.16f' % loss_r, log_out)
@@ -137,6 +137,7 @@ def solve_SIRD2COVID(R):
             R_observe = tf.compat.v1.placeholder(tf.float32, name='R_observe', shape=[batchSize_train, out_dim])
             D_observe = tf.compat.v1.placeholder(tf.float32, name='D_observe', shape=[batchSize_train, out_dim])
 
+            T_train2test = tf.compat.v1.placeholder(tf.float32, name='T_train2test', shape=[trainSet_szie, out_dim])
             T_test = tf.compat.v1.placeholder(tf.float32, name='T_test', shape=[batchSize_test, out_dim])
 
             in_learning_rate = tf.compat.v1.placeholder_with_default(input=1e-5, shape=[], name='lr')
@@ -149,6 +150,16 @@ def solve_SIRD2COVID(R):
                                               activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_mu2train = DNN_base.DNN(T_train, Weight2mu, Bias2mu, hidden_para,
                                            activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
+                in_beta2train_test = DNN_base.DNN(T_train2test, Weight2beta, Bias2beta, hidden_para,
+                                                  activateIn_name=R['actIn_Name2paras'],
+                                                  activate_name=R['act_Name2paras'])
+                in_gamma2train_test = DNN_base.DNN(T_train2test, Weight2gamma, Bias2gamma, hidden_para,
+                                                   activateIn_name=R['actIn_Name2paras'],
+                                                   activate_name=R['act_Name2paras'])
+                in_mu2train_test = DNN_base.DNN(T_train2test, Weight2mu, Bias2mu, hidden_para,
+                                                activateIn_name=R['actIn_Name2paras'],
+                                                activate_name=R['act_Name2paras'])
+
                 in_beta2test = DNN_base.DNN(T_test, Weight2beta, Bias2beta, hidden_para,
                                             activateIn_name=R['actIn_Name2paras'], activate_name=R['act_Name2paras'])
                 in_gamma2test = DNN_base.DNN(T_test, Weight2gamma, Bias2gamma, hidden_para,
@@ -165,6 +176,16 @@ def solve_SIRD2COVID(R):
                 in_mu2train = DNN_base.DNN_scale(T_train, Weight2mu, Bias2mu, hidden_para, freq2paras,
                                                  activateIn_name=R['actIn_Name2paras'],
                                                  activate_name=R['act_Name2paras'])
+                in_beta2train_test = DNN_base.DNN_scale(T_train2test, Weight2beta, Bias2beta, hidden_para,
+                                                        activateIn_name=R['actIn_Name2paras'],
+                                                        activate_name=R['act_Name2paras'])
+                in_gamma2train_test = DNN_base.DNN_scale(T_train2test, Weight2gamma, Bias2gamma, hidden_para,
+                                                         activateIn_name=R['actIn_Name2paras'],
+                                                         activate_name=R['act_Name2paras'])
+                in_mu2train_test = DNN_base.DNN_scale(T_train2test, Weight2mu, Bias2mu, hidden_para,
+                                                      activateIn_name=R['actIn_Name2paras'],
+                                                      activate_name=R['act_Name2paras'])
+
                 in_beta2test = DNN_base.DNN_scale(T_test, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                   activateIn_name=R['actIn_Name2paras'],
                                                   activate_name=R['act_Name2paras'])
@@ -181,6 +202,17 @@ def solve_SIRD2COVID(R):
                                                           activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_mu2train = DNN_base.DNN_FourierBase(T_train, Weight2mu, Bias2mu, hidden_para, freq2paras,
                                                        activate_name=R['act_Name2paras'], sFourier=1.0)
+
+                in_beta2train_test = DNN_base.DNN_FourierBase(T_train2test, Weight2beta, Bias2beta, hidden_para,
+                                                              freq2paras, activate_name=R['act_Name2paras'],
+                                                              sFourier=1.0)
+                in_gamma2train_test = DNN_base.DNN_FourierBase(T_train2test, Weight2gamma, Bias2gamma, hidden_para,
+                                                               freq2paras, activate_name=R['act_Name2paras'],
+                                                               sFourier=1.0)
+                in_mu2train_test = DNN_base.DNN_FourierBase(T_train2test, Weight2mu, Bias2mu, hidden_para,
+                                                            freq2paras, activate_name=R['act_Name2paras'],
+                                                            sFourier=1.0)
+
                 in_beta2test = DNN_base.DNN_FourierBase(T_test, Weight2beta, Bias2beta, hidden_para, freq2paras,
                                                         activate_name=R['act_Name2paras'], sFourier=1.0)
                 in_gamma2test = DNN_base.DNN_FourierBase(T_test, Weight2gamma, Bias2gamma, hidden_para, freq2paras,
@@ -191,11 +223,18 @@ def solve_SIRD2COVID(R):
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
             betaNN2train = tf.nn.sigmoid(in_beta2train)
             gammaNN2train = tf.nn.sigmoid(in_gamma2train)
-            muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
+            # muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
+            muNN2train = 0.05 * tf.nn.sigmoid(in_mu2train)
+
+            betaNN2train_test = tf.nn.sigmoid(in_beta2train_test)
+            gammaNN2train_test = tf.nn.sigmoid(in_gamma2train_test)
+            # muNN2train_test = 0.01 * tf.nn.sigmoid(in_mu2train_test)
+            muNN2train_test = 0.05 * tf.nn.sigmoid(in_mu2train_test)
 
             betaNN2test = tf.nn.sigmoid(in_beta2test)
             gammaNN2test = tf.nn.sigmoid(in_gamma2test)
-            muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
+            # muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
+            muNN2test = 0.05 * tf.nn.sigmoid(in_mu2test)
 
             dS2dt = tf.matmul(Amat[0:-1, :], S_observe)
             dI2dt = tf.matmul(Amat[0:-1, :], I_observe)
@@ -306,8 +345,8 @@ def solve_SIRD2COVID(R):
 
                 # 以下代码为输出训练过程中 beta, gamma, mu 的训练结果
                 test_epoch.append(i_epoch / 1000)
-                beta2train, gamma2train, mu2train = sess.run([betaNN2train, gammaNN2train, muNN2train],
-                                                             feed_dict={T_train: np.reshape(train_date, [-1, 1])})
+                beta2train, gamma2train, mu2train = sess.run([betaNN2train_test, gammaNN2train_test, muNN2train_test],
+                                                             feed_dict={T_train2test: np.reshape(train_date, [-1, 1])})
 
                 # 以下代码为输出 beta, gamma, mu 的测试结果
                 beta2test, gamma2test, mu2test = sess.run([betaNN2test, gammaNN2test, muNN2test],
@@ -376,10 +415,11 @@ if __name__ == "__main__":
         shutil.copy(__file__, '%s/%s' % (FolderName, os.path.basename(__file__)))
 
     # if the value of step_stop_flag is not 0, it will activate stop condition of step to kill program
-    step_stop_flag = input('please input an  integer number to activate step-stop----0:no---!0:yes--:')
-    R['activate_stop'] = int(step_stop_flag)
+    # step_stop_flag = input('please input an  integer number to activate step-stop----0:no---!0:yes--:')
+    # R['activate_stop'] = int(step_stop_flag)
+    R['activate_stop'] = int(0)
     # if the value of step_stop_flag is not 0, it will activate stop condition of step to kill program
-    R['max_epoch'] = 200000
+    R['max_epoch'] = 60000
     if 0 != R['activate_stop']:
         epoch_stop = input('please input a stop epoch:')
         R['max_epoch'] = int(epoch_stop)
@@ -404,10 +444,10 @@ if __name__ == "__main__":
 
     # R['regular_weight_model'] = 'L1'
     R['regular_weight_model'] = 'L2'          # The model of regular weights and biases
-    # R['regular_weight'] = 0.001             # Regularization parameter for weights
+    R['regular_weight'] = 0.001             # Regularization parameter for weights
     # R['regular_weight'] = 0.0005            # Regularization parameter for weights
     # R['regular_weight'] = 0.0001            # Regularization parameter for weights
-    R['regular_weight'] = 0.00005             # Regularization parameter for weights
+    # R['regular_weight'] = 0.00005             # Regularization parameter for weights
     # R['regular_weight'] = 0.00001           # Regularization parameter for weights
 
     R['optimizer_name'] = 'Adam'              # 优化器
