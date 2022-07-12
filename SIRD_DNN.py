@@ -1,5 +1,5 @@
 """
-@author: LXA
+@author: xi'an Li
 Benchmark Code of SIRD model
 2022-06-18
 """
@@ -159,28 +159,22 @@ def print_and_log_test_one_epoch(test_mes2S, test_rel2S, test_mes2I, test_rel2I,
 
 
 def solve_SIRD2COVID(R):
-    log_out_path = R['FolderName']        # 将路径从字典 R 中提取出来
-    if not os.path.exists(log_out_path):  # 判断路径是否已经存在
-        os.mkdir(log_out_path)            # 无 log_out_path 路径，创建一个 log_out_path 路径
+    log_out_path = R['FolderName']                    # 将路径从字典 R 中提取出来
+    if not os.path.exists(log_out_path):              # 判断路径是否已经存在
+        os.mkdir(log_out_path)                        # 无 log_out_path 路径，创建一个 log_out_path 路径
     log_fileout = open(os.path.join(log_out_path, 'log_train.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
     dictionary_out2file(R, log_fileout)
-
-    # log2trianSolus = open(os.path.join(log_out_path, 'train_Solus.txt'), 'w')      # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    # log2testSolus = open(os.path.join(log_out_path, 'test_Solus.txt'), 'w')        # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    # log2testSolus2 = open(os.path.join(log_out_path, 'test_Solus_temp.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
-    #
-    # log2testParas = open(os.path.join(log_out_path, 'test_Paras.txt'), 'w')  # 在这个路径下创建并打开一个可写的 log_train.txt文件
 
     trainSet_szie = R['size2train']                   # 训练集大小,给定一个数据集，拆分训练集和测试集时，需要多大规模的训练集
     batchSize_train = R['batch_size2train']           # 训练批量的大小,该值远小于训练集大小
     batchSize_test = R['batch_size2test']             # 测试批量的大小,该值小于等于测试集大小
     pt_penalty_init = R['init_penalty2predict_true']  # 预测值和真值得误差惩罚因子的初值,用于处理那些具有真实值得变量
-    wb_penalty2ode = R['regular_weight2ODE']  # 神经网络参数的惩罚因子
-    wb_penalty2paras = R['regular_weight2Paras']  # 神经网络参数的惩罚因子
+    wb_penalty2ode = R['regular_weight2ODE']          # 神经网络参数的惩罚因子
+    wb_penalty2paras = R['regular_weight2Paras']      # 神经网络参数的惩罚因子
     lr_decay = R['lr_decay']                          # 学习率额衰减
     init_lr = R['learning_rate']                      # 初始学习率
 
-    act_func2SIRD = R['act_Name2SIRD']                 # S, I, R D 四个神经网络的隐藏层激活函数
+    act_func2SIRD = R['act_Name2SIRD']                # S, I, R D 四个神经网络的隐藏层激活函数
     act_func2paras = R['act_Name2paras']              # 参数网络的隐藏层激活函数
 
     input_dim = R['input_dim']                        # 输入维度
@@ -305,7 +299,7 @@ def solve_SIRD2COVID(R):
                 S_NN = SNN_temp
                 I_NN = 0.01*INN_temp
                 R_NN = 0.1*RNN_temp
-                D_NN = 0.005*DNN_temp
+                D_NN = 0.001*DNN_temp
 
                 # 使用ReLU激活函数，这种策略不收敛
                 # S_NN = tf.nn.relu(SNN_temp)
@@ -352,7 +346,7 @@ def solve_SIRD2COVID(R):
                 S_NN = SNN_temp
                 I_NN = 0.01*INN_temp
                 R_NN = 0.1*RNN_temp
-                D_NN = 0.005*DNN_temp
+                D_NN = 0.001*DNN_temp
 
                 # 使用ReLU激活函数，这种策略不收敛
                 # S_NN = tf.nn.relu(SNN_temp)
@@ -385,9 +379,9 @@ def solve_SIRD2COVID(R):
             dR_NN2t = tf.gradients(R_NN, T_it)[0]
             dD_NN2t = tf.gradients(D_NN, T_it)[0]
 
-            temp_snn2t = -beta*S_NN*I_NN/(S_NN + I_NN)
-            temp_inn2t = beta*S_NN*I_NN - gamma * I_NN - mu * I_NN
-            temp_rnn2t = gamma *I_NN
+            temp_snn2t = -beta*S_NN * I_NN / (S_NN + I_NN)
+            temp_inn2t = beta*S_NN * I_NN - gamma * I_NN - mu * I_NN
+            temp_rnn2t = gamma * I_NN
             temp_dnn2t = mu * I_NN
 
             if str.lower(R['loss_function']) == 'l2_loss' and R['scale_up'] == 0:
@@ -402,10 +396,10 @@ def solve_SIRD2COVID(R):
                 Loss2dD = tf.reduce_mean(tf.square(dD_NN2t - temp_dnn2t))
             elif str.lower(R['loss_function']) == 'l2_loss' and R['scale_up'] == 1:
                 scale_up = R['scale_factor']
-                LossS_Net_obs = tf.reduce_mean(tf.square(scale_up*S_NN - scale_up*S_observe))
+                LossS_Net_obs = tf.reduce_mean(tf.square(S_NN - S_observe))
                 LossI_Net_obs = tf.reduce_mean(tf.square(scale_up*I_NN - scale_up*I_observe))
                 LossR_Net_obs = tf.reduce_mean(tf.square(scale_up*R_NN - scale_up*R_observe))
-                LossD_Net_obs = tf.reduce_mean(tf.square(scale_up*D_NN - scale_up*D_observe))
+                LossD_Net_obs = tf.reduce_mean(tf.square(10*scale_up*D_NN - 10*scale_up*D_observe))
 
                 Loss2dS = tf.reduce_mean(tf.square(dS_NN2t - temp_snn2t))
                 Loss2dI = tf.reduce_mean(tf.square(dI_NN2t - temp_inn2t))
@@ -423,10 +417,10 @@ def solve_SIRD2COVID(R):
                 Loss2dD = tf.reduce_mean(tf.log(tf.cosh(dD_NN2t - temp_dnn2t)))
             elif str.lower(R['loss_function']) == 'lncosh_loss' and R['scale_up'] == 1:
                 scale_up = R['scale_factor']
-                LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*S_NN - scale_up*S_observe)))
+                LossS_Net_obs = tf.reduce_mean(tf.log(tf.cosh(S_NN - S_observe)))
                 LossI_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*I_NN - scale_up*I_observe)))
                 LossR_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*R_NN - scale_up*R_observe)))
-                LossD_Net_obs = tf.reduce_mean(tf.log(tf.cosh(scale_up*D_NN - scale_up*D_observe)))
+                LossD_Net_obs = tf.reduce_mean(tf.log(tf.cosh(10*scale_up*D_NN - 10*scale_up*D_observe)))
 
                 Loss2dS = tf.reduce_mean(tf.log(tf.cosh(dS_NN2t - temp_snn2t)))
                 Loss2dI = tf.reduce_mean(tf.log(tf.cosh(dI_NN2t - temp_inn2t)))
@@ -759,8 +753,8 @@ if __name__ == "__main__":
     R['opt2sample'] = 'windows_rand_sample'  # 训练集的选取方式--随机窗口采样(以随机点为基准，然后滑动窗口采样)
 
     R['init_penalty2predict_true'] = 100     # Regularization parameter for boundary conditions
-    R['activate_stage_penalty'] = 0         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
-    # R['activate_stage_penalty'] = 1         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
+    # R['activate_stage_penalty'] = 0         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
+    R['activate_stage_penalty'] = 1         # 是否开启阶段调整惩罚项，0 代表不调整，非 0 代表调整
     if R['activate_stage_penalty'] == 1 or R['activate_stage_penalty'] == 2:
         # R['init_penalty2predict_true'] = 1000
         # R['init_penalty2predict_true'] = 100
@@ -839,9 +833,9 @@ if __name__ == "__main__":
 
     # SIRD和参数网络模型的尺度因子
     if R['model2SIRD'] != 'DNN':
-        R['freq2SIRD'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
+        R['freq2SIRD'] = np.concatenate(([1], np.arange(1, 25)), axis=0)
     if R['model2paras'] != 'DNN':
-        R['freq2paras'] = np.concatenate(([1], np.arange(1, 20)), axis=0)
+        R['freq2paras'] = np.concatenate(([1], np.arange(1, 25)), axis=0)
 
     # SIRD和参数网络模型为傅里叶网络和尺度网络时，重复高频因子或者低频因子
     if R['model2SIRD'] == 'DNN_FourierBase' or R['model2SIRD'] == 'DNN_scale':

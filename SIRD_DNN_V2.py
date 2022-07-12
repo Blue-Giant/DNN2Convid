@@ -1,5 +1,5 @@
 """
-@author: LXA
+@author: xi'an Li
 Benchmark Code of SIRD model
 2022-06-18
 """

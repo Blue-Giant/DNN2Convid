@@ -1,5 +1,5 @@
 """
-@author: LXA
+@author: xi'an Li
 Benchmark Code of SIRD model using Euler iteration and DNN
 2022-06-18
 """
@@ -95,7 +95,6 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, penalty_wb2beta, penalty_wb2g
     DNN_tools.log_string('total loss: %.16f \n\n' % loss_all, log_out)
 
 
-# Reference paper: A flexible rolling regression framework for the identification of time-varying SIRD models
 def solve_SIRD2COVID(R):
     log_out_path = R['FolderName']        # 将路径从字典 R 中提取出来
     if not os.path.exists(log_out_path):  # 判断路径是否已经存在
@@ -480,14 +479,15 @@ if __name__ == "__main__":
     R['optimizer_name'] = 'Adam'              # 优化器
     R['loss_function'] = 'L2_loss'            # 损失函数的类型
     # R['loss_function'] = 'lncosh_loss'      # 损失函数的类型
-    R['scale_up'] = 1                         # scale_up 用来控制湿粉扑对数值进行尺度提升，如1e-6量级提升到1e-2量级。不为 0 代表开启提升
-    R['scale_factor'] = 100                   # scale_factor 用来对数值进行尺度提升，如1e-6量级提升到1e-2量级
 
     R['train_model'] = 'train_union_loss'     # 训练模式:各个不同的loss累加在一起，训练
 
     if 50000 < R['max_epoch']:
-        R['learning_rate'] = 2e-3             # 学习率
-        R['lr_decay'] = 1e-4                  # 学习率 decay
+        R['learning_rate'] = 1e-2             # 学习率
+        R['lr_decay'] = 2e-4                  # 学习率 decay
+
+        # R['learning_rate'] = 2e-3             # 学习率
+        # R['lr_decay'] = 1e-4                  # 学习率 decay
         # R['learning_rate'] = 2e-4           # 学习率
         # R['lr_decay'] = 5e-5                # 学习率 decay
     elif (20000 < R['max_epoch'] and 50000 >= R['max_epoch']):
@@ -529,10 +529,10 @@ if __name__ == "__main__":
     # R['actIn_Name2paras'] = 'relu'
     # R['actIn_Name2paras'] = 'leaky_relu'
     # R['actIn_Name2paras'] = 'sigmoid'
-    # R['actIn_Name2paras'] = 'tanh'
+    R['actIn_Name2paras'] = 'tanh'
     # R['actIn_Name2paras'] = 'srelu'
     # R['actIn_Name2paras'] = 's2relu'
-    R['actIn_Name2paras'] = 'sin'
+    # R['actIn_Name2paras'] = 'sin'
     # R['actIn_Name2paras'] = 'sinAddcod'
     # R['actIn_Name2paras'] = 'elu'
     # R['actIn_Name2paras'] = 'gelu'
@@ -542,10 +542,10 @@ if __name__ == "__main__":
     # R['act_Name2paras'] = 'relu'
     # R['act_Name2paras'] = 'leaky_relu'
     # R['act_Name2paras'] = 'sigmoid'
-    # R['act_Name2paras'] = 'tanh'  # 这个激活函数比较s2ReLU合适
+    R['act_Name2paras'] = 'tanh'  # 这个激活函数比较s2ReLU合适
     # R['act_Name2paras'] = 'srelu'
     # R['act_Name2paras'] = 's2relu'
-    R['act_Name2paras'] = 'sin'
+    # R['act_Name2paras'] = 'sin'
     # R['act_Name2paras'] = 'sinAddcos'
     # R['act_Name2paras'] = 'elu'
     # R['act_Name2paras'] = 'gelu'
