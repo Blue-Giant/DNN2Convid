@@ -120,10 +120,10 @@ def solve_SIRD2COVID(R):
     flag2mu = 'WB2mu'
     hidden_para = R['hidden2para']
 
-    AI = tf.eye(batchSize_train, dtype=tf.float32) * 2
+    AI = tf.eye(batchSize_train, dtype=tf.float32) * (-2)
     Ones_mat = tf.ones([batchSize_train, batchSize_train], dtype=tf.float32)
     A_diag = tf.linalg.band_part(Ones_mat, 0, 1)
-    Amat = AI - A_diag
+    Amat = AI + A_diag
 
     if str.upper(R['model2paras']) == 'DNN_FOURIERBASE':
         Weight2beta, Bias2beta = DNN_base.Xavier_init_NN_Fourier(input_dim, out_dim, hidden_para, flag2beta)
