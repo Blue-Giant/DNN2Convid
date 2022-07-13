@@ -24,6 +24,10 @@ https://sciencedirect.53yu.com/science/article/pii/S0893965920303013
 
 9、SIR模型和Python实现 https://blog.csdn.net/weixin_41168304/article/details/122398129
 
+## Euler method
+
+欧拉法及其他改进方法——Matlab实现 https://blog.csdn.net/qq_36312878/article/details/80945781
+
 ## Runge-Kutta method
 
 Matlab中龙格-库塔(Runge-Kutta)方法原理及实现 https://blog.csdn.net/xiaokun19870825/article/details/78763739
