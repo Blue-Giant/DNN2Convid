@@ -95,6 +95,7 @@ def print_and_log2train(i_epoch, run_time, tmp_lr, penalty_wb2beta, penalty_wb2g
     DNN_tools.log_string('total loss: %.16f \n\n' % loss_all, log_out)
 
 
+# 使用拟欧拉方法，归一化数据是不可行的。
 def solve_SIRD2COVID(R):
     log_out_path = R['FolderName']        # 将路径从字典 R 中提取出来
     if not os.path.exists(log_out_path):  # 判断路径是否已经存在
@@ -229,37 +230,37 @@ def solve_SIRD2COVID(R):
             # Remark: beta, gamma,S_NN.I_NN,R_NN都应该是正的. beta.1--15之间，gamma在(0,1）使用归一化的话S_NN.I_NN,R_NN都在[0,1)范围内
             betaNN2train = tf.nn.sigmoid(in_beta2train)
             gammaNN2train = tf.nn.sigmoid(in_gamma2train)
-            # muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
-            muNN2train = 0.05 * tf.nn.sigmoid(in_mu2train)
+            muNN2train = 0.01*tf.nn.sigmoid(in_mu2train)
+            # muNN2train = 0.05 * tf.nn.sigmoid(in_mu2train)
             # muNN2train = 0.1 * tf.nn.sigmoid(in_mu2train)
             #
             betaNN2train_test = tf.nn.sigmoid(in_beta2train_test)
             gammaNN2train_test = tf.nn.sigmoid(in_gamma2train_test)
-            # muNN2train_test = 0.01 * tf.nn.sigmoid(in_mu2train_test)
-            muNN2train_test = 0.05 * tf.nn.sigmoid(in_mu2train_test)
+            muNN2train_test = 0.01 * tf.nn.sigmoid(in_mu2train_test)
+            # muNN2train_test = 0.05 * tf.nn.sigmoid(in_mu2train_test)
             # muNN2train_test = 0.1 * tf.nn.sigmoid(in_mu2train_test)
             #
             betaNN2test = tf.nn.sigmoid(in_beta2test)
             gammaNN2test = tf.nn.sigmoid(in_gamma2test)
-            # muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
-            muNN2test = 0.05 * tf.nn.sigmoid(in_mu2test)
+            muNN2test = 0.01*tf.nn.sigmoid(in_mu2test)
+            # muNN2test = 0.05 * tf.nn.sigmoid(in_mu2test)
             # muNN2test = 0.1 * tf.nn.sigmoid(in_mu2test)
 
             # betaNN2train = act_gauss(in_beta2train)
             # gammaNN2train = act_gauss(in_gamma2train)
-            # # muNN2train = 0.01*act_gauss(in_mu2train)
-            # muNN2train = 0.05 * act_gauss(in_mu2train)
+            # muNN2train = 0.01*act_gauss(in_mu2train)
+            # # muNN2train = 0.05 * act_gauss(in_mu2train)
             #
             # betaNN2train_test = act_gauss(in_beta2train_test)
             # gammaNN2train_test = act_gauss(in_gamma2train_test)
-            # # muNN2train_test = 0.01 * act_gauss(in_mu2train_test)
-            # muNN2train_test = 0.05 * act_gauss(in_mu2train_test)
+            # muNN2train_test = 0.01 * act_gauss(in_mu2train_test)
+            # # muNN2train_test = 0.05 * act_gauss(in_mu2train_test)
             #
             # betaNN2test = act_gauss(in_beta2test)
             # gammaNN2test = act_gauss(in_gamma2test)
             # # muNN2test = 0.01*act_gauss(in_mu2test)
-            # muNN2test = 0.05 * act_gauss(in_mu2test)
-            # # muNN2test = 0.01 * act_gauss(in_mu2test)
+            # # muNN2test = 0.05 * act_gauss(in_mu2test)
+            # muNN2test = 0.01 * act_gauss(in_mu2test)
 
             dS2dt = tf.matmul(Amat[0:-1, :], S_observe)
             dI2dt = tf.matmul(Amat[0:-1, :], I_observe)
@@ -340,7 +341,7 @@ def solve_SIRD2COVID(R):
     test_t_bach = DNN_data.sample_testDays_serially(test_date, batchSize_test)
 
     # ConfigProto 加上allow_soft_placement=True就可以使用 gpu 了
-    config = tf.compat.v1.ConfigProto(allow_soft_placement=True)  # 创建sess的时候对sess进行参数配置
+    config = tf.compat.v1.ConfigProto(allow_soft_placement=False)  # 创建sess的时候对sess进行参数配置
     config.gpu_options.allow_growth = True                        # True是让TensorFlow在运行过程中动态申请显存，避免过多的显存占用。
     config.allow_soft_placement = True                            # 当指定的设备不存在时，允许选择一个存在的设备运行。比如gpu不存在，自动降到cpu上运行
     with tf.compat.v1.Session(config=config) as sess:
@@ -376,6 +377,15 @@ def solve_SIRD2COVID(R):
                 # 以下代码为输出 beta, gamma, mu 的测试结果
                 beta2test, gamma2test, mu2test = sess.run([betaNN2test, gammaNN2test, muNN2test],
                                                           feed_dict={T_test: test_t_bach})
+
+                # s2t, i2t, r2t, d2t = sess.run([dS2dt, dI2dt, dR2dt, dD2dt],
+                #                               feed_dict={T_train: t_batch, S_observe: s_obs, I_observe: i_obs,
+                #                                          R_observe: r_obs, D_observe: d_obs})
+                #
+                # print('dS/dt:', s2t)
+                # print('dI/dt:', i2t)
+                # print('dR/dt:', r2t)
+                # print('dD/dt:', d2t)
 
         saveData.save_trainParas2mat_Covid(beta2train, name2para='beta2train', outPath=R['FolderName'])
         saveData.save_trainParas2mat_Covid(gamma2train, name2para='gamma2train', outPath=R['FolderName'])
@@ -444,7 +454,7 @@ if __name__ == "__main__":
     # R['activate_stop'] = int(step_stop_flag)
     R['activate_stop'] = int(0)
     # if the value of step_stop_flag is not 0, it will activate stop condition of step to kill program
-    R['max_epoch'] = 100000
+    R['max_epoch'] = 150000
     if 0 != R['activate_stop']:
         epoch_stop = input('please input a stop epoch:')
         R['max_epoch'] = int(epoch_stop)
@@ -461,15 +471,17 @@ if __name__ == "__main__":
 
     # ------------------------------------  神经网络的设置  ----------------------------------------
     R['size2train'] = 250                    # 训练集的大小
-    R['batch_size2train'] = 30              # 训练数据的批大小
+    # R['batch_size2train'] = 10               # 训练数据的批大小
+    R['batch_size2train'] = 16               # 训练数据的批大小
+    # R['batch_size2train'] = 30              # 训练数据的批大小
     R['batch_size2test'] = 50               # 训练数据的批大小
     # R['opt2sample'] = 'random_sample'     # 训练集的选取方式--随机采样
     # R['opt2sample'] = 'rand_sample_sort'    # 训练集的选取方式--随机采样后按时间排序
     R['opt2sample'] = 'windows_rand_sample'  # 训练集的选取方式--随机窗口采样(以随机点为基准，然后滑动窗口采样)
 
-    R['regular_weight_model'] = 'L0'
+    # R['regular_weight_model'] = 'L0'
     # R['regular_weight_model'] = 'L1'
-    # R['regular_weight_model'] = 'L2'          # The model of regular weights and biases
+    R['regular_weight_model'] = 'L2'          # The model of regular weights and biases
     R['regular_weight'] = 0.001             # Regularization parameter for weights
     # R['regular_weight'] = 0.0005            # Regularization parameter for weights
     # R['regular_weight'] = 0.0001            # Regularization parameter for weights
@@ -478,13 +490,13 @@ if __name__ == "__main__":
 
     R['optimizer_name'] = 'Adam'              # 优化器
     R['loss_function'] = 'L2_loss'            # 损失函数的类型
-    # R['loss_function'] = 'lncosh_loss'      # 损失函数的类型
+    # R['loss_function'] = 'lncosh_loss'      # 损失函数的类型(Nan 了, 不收敛)
 
     R['train_model'] = 'train_union_loss'     # 训练模式:各个不同的loss累加在一起，训练
 
     if 50000 < R['max_epoch']:
         R['learning_rate'] = 1e-2             # 学习率
-        R['lr_decay'] = 2e-4                  # 学习率 decay
+        R['lr_decay'] = 1e-4                  # 学习率 decay
 
         # R['learning_rate'] = 2e-3             # 学习率
         # R['lr_decay'] = 1e-4                  # 学习率 decay
@@ -529,10 +541,10 @@ if __name__ == "__main__":
     # R['actIn_Name2paras'] = 'relu'
     # R['actIn_Name2paras'] = 'leaky_relu'
     # R['actIn_Name2paras'] = 'sigmoid'
-    R['actIn_Name2paras'] = 'tanh'
+    # R['actIn_Name2paras'] = 'tanh'
     # R['actIn_Name2paras'] = 'srelu'
     # R['actIn_Name2paras'] = 's2relu'
-    # R['actIn_Name2paras'] = 'sin'
+    R['actIn_Name2paras'] = 'sin'
     # R['actIn_Name2paras'] = 'sinAddcod'
     # R['actIn_Name2paras'] = 'elu'
     # R['actIn_Name2paras'] = 'gelu'
@@ -542,10 +554,10 @@ if __name__ == "__main__":
     # R['act_Name2paras'] = 'relu'
     # R['act_Name2paras'] = 'leaky_relu'
     # R['act_Name2paras'] = 'sigmoid'
-    R['act_Name2paras'] = 'tanh'  # 这个激活函数比较s2ReLU合适
+    # R['act_Name2paras'] = 'tanh'  # 这个激活函数比较s2ReLU合适
     # R['act_Name2paras'] = 'srelu'
     # R['act_Name2paras'] = 's2relu'
-    # R['act_Name2paras'] = 'sin'
+    R['act_Name2paras'] = 'sin'
     # R['act_Name2paras'] = 'sinAddcos'
     # R['act_Name2paras'] = 'elu'
     # R['act_Name2paras'] = 'gelu'

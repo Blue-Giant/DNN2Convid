@@ -171,7 +171,7 @@ def split_3csvData2train_test(date_data, data1, data2, size2train=50, normalFact
 
 
 # 将数据集拆分为训练集合测试集
-def split_4csvData2train_test(date_data, data1, data2, data3, size2train=50, normalFactor=10000):
+def split_4csvData2train_test(date_data, data1, data2, data3, size2train=50, normalFactor=1.0):
 
     date2train = date_data[0:size2train]
     data1_train = data1[0:size2train]/float(normalFactor)
@@ -186,7 +186,7 @@ def split_4csvData2train_test(date_data, data1, data2, data3, size2train=50, nor
 
 
 # 将数据集拆分为训练集合测试集
-def split_5csvData2train_test(date_data, data1, data2, data3, data4, size2train=50, normalFactor=10000):
+def split_5csvData2train_test(date_data, data1, data2, data3, data4, size2train=50, normalFactor=1.0):
 
     date2train = date_data[0:size2train]
     data1_train = data1[0:size2train]/float(normalFactor)
@@ -314,8 +314,8 @@ def randSample_Normalize_5existData(date_data, data1, data2, data3, data4, batch
     date_samples = np.array(date_temp)
     data1_samples = np.array(data1_temp)
     data2_samples = np.array(data2_temp)
-    data3_samples = np.array(data2_temp)
-    data4_samples = np.array(data2_temp)
+    data3_samples = np.array(data3_temp)
+    data4_samples = np.array(data4_temp)
 
     date_samples = date_samples.reshape(batchsize, 1)
     data1_samples = data1_samples.reshape(batchsize, 1)
